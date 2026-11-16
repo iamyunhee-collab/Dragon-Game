@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://apis.google.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>버크 드래곤 도감 퀴즈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="app.css">
+</head><body>
+<div id="gate" class="gate"><div class="gcard"><h1>버크 드래곤 도감</h1><p>불러오는 중…</p></div></div>
+<header class="top"><div class="in">
+  <h1>버크 드래곤 도감</h1>
+  <span class="stat" id="topStat"></span>
+</div></header>
+
+<main class="wrap">
+  <div id="warn" class="warn" hidden>서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 열어 주세요.</div>
+  <section id="quizView"></section>
+  <section id="cupView" hidden></section>
+  <section id="fortuneView" hidden></section>
+  <section id="battleView" hidden></section>
+  <section id="clickView" hidden></section>
+  <section id="manageView" hidden></section>
+</main>
+
+<nav class="tabs"><div class="in" role="tablist">
+  <button id="tabQuiz" role="tab" aria-selected="true">퀴즈</button>
+  <button id="tabCup" role="tab" aria-selected="false">월드컵</button>
+  <button id="tabFortune" role="tab" aria-selected="false">뽑기</button>
+  <button id="tabBattle" role="tab" aria-selected="false">전투</button>
+  <button id="tabClick" role="tab" aria-selected="false">미니게임</button>
+  <button id="tabManage" role="tab" aria-selected="false">사진</button>
+</div></nav>
+<div id="toast" class="toast" hidden></div>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<script src="vendor/matter.min.js"></script>
+<script src="config.js"></script>
+<script src="fb.js"></script>
+<script src="app.js"></script>
+</body></html>
