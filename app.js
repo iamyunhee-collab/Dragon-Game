@@ -196,7 +196,7 @@ async function initCloud(){
   await refresh(); FB.gateOff();
 }
 
-window.onBlobsLoaded=function(){ try{ skLoadImgs(); }catch(e){} rerender(); };
+window.onBlobsLoaded=function(){ try{ skLoadImgs(); }catch(e){} rerender(); try{ if(view==="click"){ if(mgMode==="click") renderClick(); else if(mgMode==="suika") skRenderSlots(); } }catch(e){} };
 async function shrink(file){
   try{
     const src=URL.createObjectURL(file);
