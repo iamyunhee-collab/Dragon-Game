@@ -39,6 +39,15 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .rks{font-family:var(--display,inherit);font-variant-numeric:tabular-nums}.rkt{font-size:.75rem;opacity:.65}
 .rkme{margin:0;text-align:center;font-weight:700}
 .mgrank{flex:none;white-space:nowrap}
+.pvp{display:flex;flex-direction:column;gap:10px}
+.pvpme{display:flex;flex-direction:column;gap:6px;background:var(--surface,#fff);border:2px solid var(--line,#ddd);border-radius:14px;padding:12px}
+.pvpme h3{margin:0}
+.pvprow{display:flex;gap:10px;align-items:center;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:14px;padding:10px 12px}
+.pvpwho{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pvpteam{display:flex;gap:6px;flex-wrap:wrap}
+.pvpu{display:flex;flex-direction:column;align-items:center;width:64px;font-size:.65rem;text-align:center}
+.pvpu img{width:56px;height:56px;border-radius:12px;object-fit:cover;border:2px solid var(--tc,#ccc)}
+.pvpu i{font-style:normal;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:64px}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{

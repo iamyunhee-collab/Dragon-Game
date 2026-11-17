@@ -1437,6 +1437,7 @@ async function playerTurn(kind,switchTo){
 }
 function autoStep(){ if(!bt||!bt.auto||bt.busy||bt.done) return; const u=cur("me"); playerTurn(u.charge>=u.sk.cd?"special":"attack"); }
 function finish(win){
+  if(bt&&bt.pvp) return pvpFinish(win);
   const n=bt.n, first=win&&n>bprog.cleared; let reward=0, ticket=false;
   if(win){ reward=Math.round(rewardOf(n,first)*(1+rsum("coin_pct")/100)); bump("coins",reward);
     if(first) bprog.cleared=n;
@@ -1457,6 +1458,7 @@ function bcard(u,side,act){
 function bench(arr,idx,side){ return arr.length>1?`<div class="bench">${arr.map((u,i)=>i===idx?"":`<div class="bmini ${alive(u)?"":"down"}" title="${esc(koOf(u.sid))}">${cardPhoto(u.sid)?`<img src="${urlOf(cardPhoto(u.sid))}" alt="">`:""}<i style="width:${u.hp/u.max*100}%"></i></div>`).join("")}</div>`:""; }
 function renderFight(el){
   const me=cur("me"), foe=cur("foe"), d=bt.done;
+  if(d&&bt.pvp){ pvpResult(el); return; }
   if(d){
     el.innerHTML=`<div class="end bresult ${d.win?"win":"lose"}">
       <h2>${d.win?(bt.info.boss?"보스를 쓰러뜨렸어요!":"승리!"):"아쉽게 졌어요"}</h2>
@@ -1470,7 +1472,7 @@ function renderFight(el){
     return;
   }
   const canSk=me.charge>=me.sk.cd, others=bt.me.map((u,i)=>({u,i})).filter(x=>x.i!==bt.mi&&alive(x.u));
-  el.innerHTML=`<div class="bhead"><b>${bt.info.boss?"보스 ":""}스테이지 ${bt.n}</b><span class="note">${bt.turn}턴</span></div>
+  el.innerHTML=`<div class="bhead"><b>${bt.pvp?esc(bt.pvp.name)+" 팀과 대결":(bt.info.boss?"보스 ":"")+"스테이지 "+bt.n}</b><span class="note">${bt.turn}턴</span></div>
     <div class="bside foe">${bench(bt.foe,bt.fi,"foe")}${bcard(foe,"foe",true)}</div>
     <p class="blog" id="blog" aria-live="polite">${esc(bt.log)}</p>
     <div class="bside me">${bcard(me,"me",true)}${bench(bt.me,bt.mi,"me")}</div>
@@ -1491,7 +1493,7 @@ function renderFight(el){
     bt.auto=false; bv.autoOn=false; if(bt.busy){ bt.quitPending=true; const b=q("bQuit"); if(b) b.textContent="그만두는 중…"; } else { bt=null; renderBattle(); toast("전투를 그만뒀어요"); } };
   if(q("bAuto")) q("bAuto").onclick=()=>{ bt.auto=!bt.auto; bv.autoOn=bt.auto; renderBattle(); if(bt.auto) autoStep(); };
 }
-function bsubBar(){ return `<div class="chips" role="group" aria-label="전투 화면">${[["adv","모험"],["cards","카드와 팀"],["set","전투 설정"]].filter(x=>x[0]!=="set"||FB.isOwner).map(([k,l])=>`<button class="chip" data-bsub="${k}" aria-pressed="${bv.sub===k}">${l}</button>`).join("")}</div>`; }
+function bsubBar(){ return `<div class="chips" role="group" aria-label="전투 화면">${[["adv","모험"],["pvp","친구 대결"],["cards","카드와 팀"],["set","전투 설정"]].filter(x=>x[0]!=="set"||FB.isOwner).map(([k,l])=>`<button class="chip" data-bsub="${k}" aria-pressed="${bv.sub===k}">${l}</button>`).join("")}</div>`; }
 function teamStrip(){
   const own=battleOwned(); const t=team.filter(id=>own.includes(id));
   return `<div class="tstrip">${[0,1,2].map(i=>{const id=t[i]; return id?`<div class="tslot">${cardPhoto(id)?`<img src="${urlOf(cardPhoto(id))}" alt="">`:""}<span>${esc(koOf(id))} Lv.${lvOf(id)}</span></div>`:`<div class="tslot empty"><span>빈 자리</span></div>`;}).join("")}</div>`;
@@ -1567,7 +1569,7 @@ function softRenderBattle(){ // 저장소에서 온 변화: 입력 중이면 화
 function renderBattle(){
   const el=$("#battleView"); if(!el) return;
   if(bt) return renderFight(el);
-  el.innerHTML=bsubBar()+(bv.sub==="cards"?cardsHTML():bv.sub==="set"?setHTML():advHTML());
+  el.innerHTML=bsubBar()+(bv.sub==="cards"?cardsHTML():bv.sub==="set"?setHTML():bv.sub==="pvp"?pvpHTML():advHTML()); if(bv.sub==="pvp") pvpBind(el);
   el.querySelectorAll("[data-bsub]").forEach(b=>b.onclick=()=>{ bv.sub=b.dataset.bsub; renderBattle(); });
   const gt=$("#goTeam"); if(gt) gt.onclick=()=>{ bv.sub="cards"; renderBattle(); };
   el.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>startBattle(+b.dataset.st));
@@ -2888,6 +2890,65 @@ async function openRank(game){
 setTimeout(()=>{ if(!cloud) return; const mb=mini.memBest||{};
   [["suika",sk.best],["fly",mini.flyBest],["hide",mini.hideBest],["mem_easy",mb.easy],["mem_normal",mb.normal],["mem_hard",mb.hard],["sling",mini.slingBest],["run",mini.runBest],["stack",mini.stackBest],["simon",mini.simonBest],["egg",mini.eggBest],["dodge",mini.dodgeBest]]
     .forEach(([g,v])=>{ if(v) FB.rank.seed(g,v).catch(()=>{}); }); },8000);
+
+// ---------- 친구 대결: 친구가 등록한 팀과 내 팀이 싸워요 (친구가 접속해 있지 않아도 돼요) ----------
+let arenaList=null, arenaLoading=false;
+const SAFE=n=>Math.max(0,Math.min(9e15,Math.floor(+n||0)));
+function myArenaTeam(){ const own=battleOwned(); return team.filter(id=>own.includes(id)).map(sid=>{ const u=playerUnit(sid); return {sid,lv:SAFE(u.lv),hp:SAFE(u.max),atk:SAFE(u.atk)}; }); }
+const teamPower=t=>SAFE(t.reduce((a,u)=>a+u.hp/10+u.atk,0));
+async function pvpLoad(){ if(arenaLoading) return; arenaLoading=true;
+  try{ const t=myArenaTeam(); if(t.length) await FB.arena.publish(t,teamPower(t)); arenaList=await FB.arena.list(); }catch(e){ arenaList=arenaList||[]; }
+  arenaLoading=false; if(view==="battle"&&bv.sub==="pvp"&&!bt) renderBattle(); }
+const pvpUnitsHTML=t=>`<div class="pvpteam">${(t||[]).filter(u=>SPECIES.some(s=>s.id===u.sid)).map(u=>{ const ph=cardPhoto(u.sid), tc=(TIER_BY[tierOf(u.sid)]||TIER_BY.common).cls;
+  return `<span class="pvpu ${tc}">${ph?`<img src="${urlOf(ph)}" alt="">`:""}<i>${esc(koOf(u.sid))} Lv.${fmt(u.lv)}</i></span>`; }).join("")}</div>`;
+function pvpHTML(){
+  if(arenaList===null) pvpLoad();
+  const list=arenaList||[], me=list.find(a=>a.me), t=myArenaTeam();
+  const others=list.filter(a=>!a.me&&Array.isArray(a.team)&&a.team.length).sort((a,b)=>(b.power||0)-(a.power||0));
+  return `<div class="pvp">
+    <div class="pvpme"><h3>내 팀</h3>${t.length?`${pvpUnitsHTML(t)}<p class="note" style="margin:0">전투력 <b>${fmt(teamPower(t))}</b>${me?` · ${me.wins||0}승 ${me.losses||0}패`:""}</p>
+      <p class="note" style="margin:0">친구들은 이 팀과 대결해요. 팀을 바꾸면 이 탭에 들어올 때 자동으로 바뀌어요.</p>`
+      :`<p class="note" style="margin:0">'카드와 팀'에서 팀을 먼저 골라 주세요.</p><button class="btn small" id="goTeam">팀 고르기</button>`}</div>
+    <h3 style="margin:4px 0 0">대결할 친구</h3>
+    ${arenaList===null?`<p class="note">불러오는 중…</p>`:others.length?others.map(a=>`<div class="pvprow">
+        <div class="pvpwho"><b>${esc(a.name||"이름 없음")}</b><span class="note">전투력 ${fmt(a.power||0)} · ${a.wins||0}승 ${a.losses||0}패</span>${pvpUnitsHTML(a.team)}</div>
+        <button class="btn small" data-pvp="${esc(a.uid)}" ${t.length?"":"disabled"}>대결!</button></div>`).join("")
+      :`<p class="note">아직 팀을 등록한 친구가 없어요. 친구가 '친구 대결' 탭에 한 번 들어오면 여기에 나와요.</p>`}
+    <button class="btn ghost small" id="pvpRefresh">새로 고침</button></div>`;
+}
+function pvpBind(el){ el.querySelectorAll("[data-pvp]").forEach(b=>b.onclick=()=>startPvp(b.dataset.pvp));
+  const r=$("#pvpRefresh"); if(r) r.onclick=()=>{ arenaList=null; renderBattle(); }; }
+function startPvp(uid){
+  const a=(arenaList||[]).find(x=>x.uid===uid); if(!a) return;
+  const mine=team.filter(id=>battleOwned().includes(id)); if(!mine.length){ toast("먼저 팀을 골라주세요"); return; }
+  const foes=(a.team||[]).filter(u=>SPECIES.some(s=>s.id===u.sid)).slice(0,3).map(u=>{ const c=cfgOf(u.sid), hp=Math.max(1,SAFE(u.hp));
+    return {sid:u.sid,lv:Math.max(1,SAFE(u.lv)),boss:false,max:hp,hp,atk:Math.max(1,SAFE(u.atk)),sk:c.sk,charge:0,stun:false,shield:0}; });
+  if(!foes.length){ toast("이 친구 팀을 불러오지 못했어요"); return; }
+  const down=battleRules().filter(r=>(r.trigger==="always"||r.trigger==="start")&&r.action==="enemy_atk_down").reduce((s,r)=>s+r.value,0);
+  if(down) foes.forEach(f=>f.atk=Math.max(1,Math.round(f.atk*(1-Math.min(90,down)/100))));
+  bt={n:0,pvp:{uid:a.uid,name:a.name||"친구",power:a.power||0},info:{boss:false},rules:battleRules(),usedFaint:new Set(),dodged:false,me:mine.map(playerUnit),foe:foes,mi:0,fi:0,
+    log:`${a.name||"친구"} 팀과 대결 시작!`,busy:false,auto:!!bv.autoOn,done:null,switching:false,turn:1};
+  if(battleRules().some(r=>r.trigger==="start"&&r.action==="stun_enemy"&&roll(r))) bt.foe[0].stun=true;
+  { const seal=battleRules().filter(r=>r.trigger==="start"&&r.action==="seal_enemy"&&roll(r)).reduce((m,r)=>Math.max(m,Math.round(r.value)),0);
+    if(seal){ bt.foe.forEach(f=>f.sealed=seal); bt.log+=` 펫 효과로 상대가 ${seal}턴 동안 필살기를 못 써요!`; } }
+  renderBattle(); window.scrollTo(0,0); if(bt.auto) setTimeout(autoStep,700);
+}
+function pvpFinish(win){
+  const reward=win?Math.min(100000,100+Math.round((bt.pvp.power||0)/50)):0;
+  if(reward) bump("coins",reward);
+  FB.arena.record(win).then(()=>{ arenaList=null; }).catch(()=>{});
+  bt.done={win,reward}; bt.busy=false; bt.auto=false; renderBattle(); return true;
+}
+function pvpResult(el){ const d=bt.done, nm=esc(bt.pvp.name);
+  el.innerHTML=`<div class="end bresult ${d.win?"win":"lose"}">
+    <h2>${d.win?`${nm} 팀을 이겼어요!`:`${nm} 팀에게 졌어요`}</h2>
+    ${d.win?`<div class="gemrow">${COIN_SVG}<span class="big" style="color:var(--coin)">+${fmt(d.reward)}</span><span class="note">코인</span></div>`:`<p class="note" style="margin:0">카드 레벨을 올리거나 팀·펫을 바꿔서 다시 도전해 봐요.</p>`}
+    <div class="row"><button class="btn" id="pvpAgain">다시 대결</button>${d.win?`<button class="btn kakao" id="pvpBrag">자랑하기</button>`:""}<button class="btn ghost" id="pvpOut">다른 친구</button></div></div>`;
+  const uid=bt.pvp.uid, name=bt.pvp.name;
+  $("#pvpAgain").onclick=()=>{ bt=null; startPvp(uid); };
+  const bb=$("#pvpBrag"); if(bb) bb.onclick=()=>shareCard({game:"친구 대결",big:`${name} 팀 격파!`,photo:cardPhoto(bt.me[0].sid)?urlOf(cardPhoto(bt.me[0].sid)):null});
+  $("#pvpOut").onclick=()=>{ bt=null; bv.sub="pvp"; arenaList=null; renderBattle(); };
+}
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
 

@@ -189,7 +189,16 @@
       const list=await rank.list(game); const me=list.find(r=>r.me);
       return {improved:better&&score>0,place:me?me.place:null,total:list.length}; }
   };
-  window.FB={ publishBlobs, rank, get name(){ return myName; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  /* 친구 대결: arena/{uid} 에 내 팀 하나 */
+  const arena={
+    async publish(team,power){ const ref=fs.doc("arena/"+user.uid); let cur={}; try{ const s=await ref.get(); if(s.exists) cur=s.data()||{}; }catch(e){}
+      if(cur.team&&JSON.stringify(cur.team)===JSON.stringify(team)&&cur.name===myName&&cur.power===power) return;
+      await ref.set({name:myName.slice(0,20)||"이름 없음",team,power:Math.floor(power)||0,wins:Math.floor(cur.wins||0),losses:Math.floor(cur.losses||0),at:firebase.firestore.FieldValue.serverTimestamp()}); },
+    async list(){ const s=await fs.collection("arena").get(); return s.docs.map(d=>Object.assign({},d.data(),{uid:d.id,me:d.id===user.uid})); },
+    async record(win){ const ref=fs.doc("arena/"+user.uid); const s=await ref.get(); if(!s.exists) return; const v=s.data();
+      await ref.set({name:v.name,team:v.team,power:v.power,wins:Math.floor(v.wins||0)+(win?1:0),losses:Math.floor(v.losses||0)+(win?0:1),at:firebase.firestore.FieldValue.serverTimestamp()}); }
+  };
+  window.FB={ publishBlobs, rank, arena, get name(){ return myName; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{
