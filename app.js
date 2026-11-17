@@ -1735,6 +1735,7 @@ function renderClick(force){
   if(mgMode==="dodge"){ if(force||!$("#dodgeCanvas")) renderDodge(); return; }
   if(mgMode==="tama"){ if(force||!$(".tama")) renderTama(); return; }
   if(mgMode==="rhythm"){ if(force||!$("#rhythmCanvas")) renderRhythm(); return; }
+  if(RH&&RH.stop&&RH.state==="play"){ RH.stop(); RH=null; }
   if(mgMode==="magic"){ if(force||!$("#magicCanvas")) renderMagic(); return; }
   if(mgMode==="tetris"){ if(force||!$("#tetrisCanvas")) renderTetris(); return; }
   if(mgMode==="berk"){ if(force||!$("#bkMap")) renderBerk(); else bkRefresh(); return; }
@@ -3067,12 +3068,13 @@ const HOME_SECTIONS=[
    <li>돌봐 줄수록 애정이 쌓여서 레벨이 올라요. 레벨이 오를 때마다 보석 선물을 줘요.</li>
    <li>세 가지가 모두 50 이상이면 하루에 한 번 <b>오늘의 선물</b>(보석·물고기)을 받아요.</li>
    <li>오래 안 돌보면 배고파하고 시무룩해져요. 매일 들러 주세요!</li></ul>`},
-  {id:"rhythm",ico:"🎵",col:"#A05CD6",name:"리듬",sum:"박자에 맞춰 발자국 누르기",go:()=>goMini("rhythm"),
+  {id:"rhythm",ico:"🎵",col:"#A05CD6",name:"리듬",sum:"음악에 맞춰 발자국 누르기",go:()=>goMini("rhythm"),
    det:`<p>음악에 맞춰 네 줄로 <b>드래곤 발자국</b>이 떨어져요. 아래 선에 닿는 순간 그 줄을 눌러요.</p>
-   <ul><li>딱 맞으면 <b>완벽!</b>(300점), 조금 빗나가면 <b>좋아!</b>(100점)이에요.</li>
-   <li>연속으로 맞히면 <b>콤보</b>가 쌓여서 점수가 커져요. 놓치면 콤보가 끊겨요.</li>
-   <li>1분짜리 곡이고, 뒤로 갈수록 발자국이 많아지고 두 개가 같이 나오기도 해요.</li>
-   <li>소리를 켜고 하면 훨씬 재밌어요. 점수는 <b>랭킹</b>에 올라가요.</li></ul>`},
+   <ul><li>앱이 직접 연주하는 노래 3곡이 있어요: <b>버크의 아침</b>, <b>드래곤 레이스</b>(빠름), <b>밤하늘 비행</b>(느림). 멜로디 음 하나하나가 발자국이에요.</li>
+   <li><b>내 음악으로 하기</b>: 휴대폰에 있는 음악 파일을 고르면 앱이 박자와 높낮이를 듣고 발자국을 자동으로 만들어요. 파일은 서버에 올리지 않아요. 내 음악은 랭킹에 안 올라가요.</li>
+   <li>난이도: 쉬움(정박만), 보통, 어려움(두 개 동시에 나오기도 해요).</li>
+   <li>딱 맞으면 <b>완벽!</b>(300점), 조금 빗나가면 <b>좋아!</b>(100점). 콤보가 쌓일수록 점수가 커져요.</li>
+   <li>휴대폰 소리를 켜고 하세요.</li></ul>`},
   {id:"magic",ico:"🪄",col:"#E4572E",name:"불꽃 마법",sum:"모양을 그려 바이킹 물리치기",go:()=>goMini("magic"),
    det:`<p>바이킹들이 마을로 걸어와요. 바이킹 머리 위에 있는 <b>노란 모양</b>을 화면에 손가락으로 그리면 드래곤이 불을 뿜어요.</p>
    <ul><li>모양은 ─ (가로줄), │ (세로줄), V, Λ, ○ (동그라미), Z 여섯 가지예요.</li>
@@ -3338,34 +3340,83 @@ function renderTama(){
   el.querySelectorAll("[data-tmpick]").forEach(b=>b.onclick=()=>{ tama.sid=b.dataset.tmpick; save(); renderTama(); });
 }
 
-/* ---------- 1. 드래곤 리듬 ---------- */
-const RH_LANES=4, RH_HIT=600, RH_SPEED=0.42, RH_LEN=60000, RH_COL=["#E4572E","#F2C14E","#3FA7D6","#9BC53D"], RH_HZ=[261.6,329.6,392,523.3];
-let RH=null, rhAudio=null;
-function rhNew(){ const bpm=112, beat=60000/bpm, notes=[]; let t=2000, i=0; const r=seedRand("rhythm|"+Date.now());
-  while(t<RH_LEN){ const dense=t/RH_LEN; const step=dense<.3?beat:dense<.7?beat/2:beat/2;
-    if(r()<(dense<.3?.7:dense<.7?.65:.8)){ const lane=Math.floor(r()*RH_LANES); notes.push({t,lane,hit:false,miss:false});
-      if(dense>.6&&r()<.18) notes.push({t,lane:(lane+1+Math.floor(r()*3))%RH_LANES,hit:false,miss:false}); }
-    t+=step; i++; }
-  return {state:"ready",notes,score:0,combo:0,maxCombo:0,perfect:0,good:0,miss:0,start:0,beat,fx:[],lit:[0,0,0,0]}; }
-function rhSound(hz,dur,vol,type){ try{ rhAudio=rhAudio||new (window.AudioContext||window.webkitAudioContext)(); const o=rhAudio.createOscillator(), g=rhAudio.createGain();
-  o.type=type||"triangle"; o.frequency.value=hz; g.gain.setValueAtTime(vol||.2,rhAudio.currentTime); g.gain.exponentialRampToValueAtTime(.0001,rhAudio.currentTime+dur);
-  o.connect(g).connect(rhAudio.destination); o.start(); o.stop(rhAudio.currentTime+dur+.02); }catch(e){} }
-function rhTap(x){ if(!RH) return; if(RH.state==="ready"){ RH.state="play"; RH.start=performance.now(); RH.nextBeat=0; return; } if(RH.state!=="play") return;
-  const lane=Math.max(0,Math.min(RH_LANES-1,Math.floor(x/(GW/RH_LANES)))), now=performance.now()-RH.start; RH.lit[lane]=8;
+/* ---------- 1. 드래곤 리듬: 앱이 직접 연주하는 노래 3곡 + 내 음악 파일(박자를 분석해서 발자국을 만들어요) ---------- */
+const RH_LANES=4, RH_HIT=600, RH_SPEED=0.42, RH_COL=["#E4572E","#F2C14E","#3FA7D6","#9BC53D"];
+let RH=null, rhAudio=null, rhSel={song:"morning",diff:"normal"}, rhMyFile=null; // rhMyFile: {name,buffer,chart}
+try{ Object.assign(rhSel,JSON.parse(localStorage.getItem("httyd-rhsel")||"{}")); }catch(e){}
+const actx=()=>{ rhAudio=rhAudio||new (window.AudioContext||window.webkitAudioContext)(); if(rhAudio.state==="suspended") rhAudio.resume(); return rhAudio; };
+const midiHz=m=>440*Math.pow(2,(m-69)/12);
+// 직접 작곡한 노래: 코드 진행 + 정해진 리듬 꼴 + 음계 안에서 걷는 멜로디 (씨앗이 같으면 항상 같은 곡)
+const RH_SONGS={
+  morning:{title:"버크의 아침",ico:"🌅",bpm:118,bars:32,key:60,scale:[0,2,4,7,9],chords:[0,7,9,5],wave:"triangle",seed:"morning"},
+  race:{title:"드래곤 레이스",ico:"🏁",bpm:142,bars:40,key:62,scale:[0,2,4,7,9],chords:[0,5,7,5],wave:"square",seed:"race"},
+  night:{title:"밤하늘 비행",ico:"🌙",bpm:96,bars:24,key:57,scale:[0,3,5,7,10],chords:[0,8,3,10],wave:"sine",seed:"night"}};
+const RH_PAT=[[0,1,2,3],[0,1.5,2,3],[0,.5,1,2,3],[0,1,2,2.5,3],[0,.5,1.5,2,3,3.5],[0,2,3],[0,1,1.5,2,3,3.5]];
+function rhCompose(S){ const r=seedRand("song|"+S.seed), beat=60/S.bpm, ev=[]; let deg=Math.floor(S.scale.length/2), oct=0;
+  for(let bar=0;bar<S.bars;bar++){ const ch=S.chords[bar%S.chords.length], bt=bar*4*beat+1.5, late=bar/S.bars;
+    const pat=RH_PAT[Math.floor(r()*(late<.25?3:RH_PAT.length))];
+    for(const p of pat){ const step=Math.floor(r()*5)-2; deg+=step; while(deg<0){ deg+=S.scale.length; oct--; } while(deg>=S.scale.length){ deg-=S.scale.length; oct++; } if(oct>1) oct=1; if(oct<-1) oct=-1;
+      const m=S.key+12+S.scale[deg]+12*oct+(bar%8===7&&p===pat[pat.length-1]?0:0); ev.push({t:bt+p*beat,m,dur:beat*.45,lane:(deg+oct*S.scale.length+20)%RH_LANES,on:Number.isInteger(p)}); }
+    for(let q=0;q<4;q++) ev.push({t:bt+q*beat,drum:q%2?"snare":"kick",bass:q%2===0?S.key-12+ch:null});
+    for(let q=0;q<8;q++) ev.push({t:bt+q*beat/2,drum:"hat"}); }
+  return {ev,len:(S.bars*4*beat+2)*1000,beat:beat*1000}; }
+function rhSchedule(ac,t0,ev,wave){ const out=ac.createGain(); out.gain.value=.55; out.connect(ac.destination); const nodes=[];
+  const noise=ac.createBuffer(1,ac.sampleRate*.2,ac.sampleRate); const d=noise.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  for(const e of ev){ const t=t0+e.t;
+    if(e.m!=null){ const o=ac.createOscillator(), g=ac.createGain(); o.type=wave; o.frequency.value=midiHz(e.m); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.22,t+.015); g.gain.exponentialRampToValueAtTime(.0001,t+e.dur);
+      o.connect(g).connect(out); o.start(t); o.stop(t+e.dur+.05); nodes.push(o); }
+    if(e.bass!=null){ const o=ac.createOscillator(), g=ac.createGain(); o.type="triangle"; o.frequency.value=midiHz(e.bass); g.gain.setValueAtTime(.25,t); g.gain.exponentialRampToValueAtTime(.0001,t+.4); o.connect(g).connect(out); o.start(t); o.stop(t+.45); nodes.push(o); }
+    if(e.drum==="kick"){ const o=ac.createOscillator(), g=ac.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+.12); g.gain.setValueAtTime(.6,t); g.gain.exponentialRampToValueAtTime(.0001,t+.15); o.connect(g).connect(out); o.start(t); o.stop(t+.16); nodes.push(o); }
+    if(e.drum==="snare"||e.drum==="hat"){ const s=ac.createBufferSource(), f=ac.createBiquadFilter(), g=ac.createGain(); s.buffer=noise; f.type=e.drum==="hat"?"highpass":"bandpass"; f.frequency.value=e.drum==="hat"?7000:1800;
+      g.gain.setValueAtTime(e.drum==="hat"?.06:.25,t); g.gain.exponentialRampToValueAtTime(.0001,t+(e.drum==="hat"?.04:.12)); s.connect(f).connect(g).connect(out); s.start(t); s.stop(t+.15); nodes.push(s); } }
+  return ()=>{ nodes.forEach(n=>{ try{ n.stop(); }catch(e){} }); try{ out.disconnect(); }catch(e){} }; }
+function rhChartFrom(ev,diff){ let notes=ev.filter(e=>e.m!=null).map(e=>({t:e.t*1000,lane:e.lane,on:e.on}));
+  if(diff==="easy") notes=notes.filter(n=>n.on); notes.sort((a,b)=>a.t-b.t);
+  const out=[]; for(const n of notes){ const p=out[out.length-1]; if(p&&n.t-p.t<(diff==="easy"?380:170)) continue; out.push({t:n.t,lane:n.lane,hit:false,miss:false}); }
+  if(diff==="hard"){ const extra=[]; out.forEach((n,i)=>{ if(i%5===2) extra.push({t:n.t,lane:(n.lane+2)%RH_LANES,hit:false,miss:false}); }); out.push(...extra); out.sort((a,b)=>a.t-b.t); }
+  return out; }
+// 내 음악: 소리 크기가 갑자기 커지는 순간(박자)을 찾고, 낮은 소리~높은 소리 중 어디가 컸는지로 줄을 정해요
+async function rhAnalyze(buf,diff){
+  const sr=buf.sampleRate, dur=Math.min(buf.duration,180), len=Math.floor(dur*sr);
+  const off=new OfflineAudioContext(4,len,sr), src=off.createBufferSource(); src.buffer=buf; const merge=off.createChannelMerger(4);
+  [[90,"lowpass"],[400,"bandpass"],[1500,"bandpass"],[5000,"highpass"]].forEach(([f,t],i)=>{ const b=off.createBiquadFilter(); b.type=t; b.frequency.value=f; b.Q.value=.8; src.connect(b); b.connect(merge,0,i); });
+  merge.connect(off.destination); src.start(); const rb=await off.startRendering();
+  const hop=512, nF=Math.floor(len/hop), E=[0,1,2,3].map(()=>new Float32Array(nF)), tot=new Float32Array(nF);
+  for(let c=0;c<4;c++){ const d=rb.getChannelData(c); for(let f=0;f<nF;f++){ let s=0; for(let i=f*hop;i<(f+1)*hop;i++) s+=d[i]*d[i]; E[c][f]=Math.sqrt(s/hop); tot[f]+=E[c][f]; } }
+  const flux=new Float32Array(nF); for(let f=1;f<nF;f++) flux[f]=Math.max(0,tot[f]-tot[f-1]);
+  const W=Math.round(sr/hop*0.5), k=diff==="easy"?2.2:diff==="hard"?1.2:1.6, gap=diff==="easy"?0.42:diff==="hard"?0.16:0.24, notes=[]; let last=-9;
+  for(let f=1;f<nF-1;f++){ let m=0,v=0,n=0; for(let j=Math.max(0,f-W);j<Math.min(nF,f+W);j++){ m+=flux[j]; n++; } m/=n; for(let j=Math.max(0,f-W);j<Math.min(nF,f+W);j++) v+=(flux[j]-m)**2; const sd=Math.sqrt(v/n);
+    const t=f*hop/sr; if(flux[f]>m+k*sd&&flux[f]>=flux[f-1]&&flux[f]>=flux[f+1]&&t-last>=gap&&t>1){ last=t; let best=0; for(let c=1;c<4;c++) if(E[c][f]/(E[c].reduce?1:1)>E[best][f]) best=c; notes.push({t:t*1000,lane:best,hit:false,miss:false}); } }
+  // 한 줄에 너무 몰리지 않게 살짝 섞어요
+  for(let i=2;i<notes.length;i++) if(notes[i].lane===notes[i-1].lane&&notes[i].lane===notes[i-2].lane) notes[i].lane=(notes[i].lane+1+(i%3))%RH_LANES;
+  return {notes,len:dur*1000+800}; }
+function rhNew(){ return {state:"pick",notes:[],score:0,combo:0,maxCombo:0,perfect:0,good:0,miss:0,fx:[],lit:[0,0,0,0],stop:null,t0:0,len:60000}; }
+const rhNow=()=>RH&&RH.state==="play"?(actx().currentTime-RH.t0)*1000:0;
+async function rhStart(){
+  const ac=actx(); const r=RH; r.score=0; r.combo=0; r.maxCombo=0; r.perfect=0; r.good=0; r.miss=0; r.fx=[];
+  if(rhSel.song==="mine"){ if(!rhMyFile){ toast("먼저 음악 파일을 골라 주세요"); return; }
+    mgSet("rhMsg","곡을 분석하는 중…"); r.state="load";
+    try{ const ch=rhMyFile.charts&&rhMyFile.charts[rhSel.diff]||await rhAnalyze(rhMyFile.buffer,rhSel.diff); rhMyFile.charts=Object.assign({},rhMyFile.charts,{[rhSel.diff]:ch});
+      r.notes=ch.notes.map(n=>Object.assign({},n,{hit:false,miss:false})); r.len=ch.len; r.title=rhMyFile.name; r.ranked=false;
+      const s=ac.createBufferSource(); s.buffer=rhMyFile.buffer; s.connect(ac.destination); r.t0=ac.currentTime+.6; s.start(r.t0); r.stop=()=>{ try{ s.stop(); }catch(e){} }; }
+    catch(e){ toast("이 음악 파일은 열 수 없어요. 다른 파일(mp3, m4a 등)을 골라 주세요"); r.state="pick"; renderRhythm(true); return; } }
+  else { const S=RH_SONGS[rhSel.song]||RH_SONGS.morning, c=rhCompose(S); r.notes=rhChartFrom(c.ev,rhSel.diff); r.len=c.len; r.title=S.title; r.ranked=true;
+    r.t0=ac.currentTime+.6; r.stop=rhSchedule(ac,r.t0,c.ev,S.wave); }
+  r.state="play"; mgSet("rhMsg",`♪ ${r.title}`); }
+function rhTap(x){ if(!RH||RH.state!=="play") return;
+  const lane=Math.max(0,Math.min(RH_LANES-1,Math.floor(x/(GW/RH_LANES)))), now=rhNow(); RH.lit[lane]=8;
   let best=null; for(const n of RH.notes){ if(n.hit||n.miss||n.lane!==lane) continue; const d=Math.abs(n.t-now); if(d<=170&&(!best||d<Math.abs(best.t-now))) best=n; }
-  if(!best){ return; } const d=Math.abs(best.t-now); best.hit=true; const pf=d<=75;
+  if(!best) return; const d=Math.abs(best.t-now); best.hit=true; const pf=d<=75;
   RH.combo++; RH.maxCombo=Math.max(RH.maxCombo,RH.combo); RH.score+=(pf?300:100)*(1+Math.floor(RH.combo/10)*0.1); if(pf) RH.perfect++; else RH.good++;
-  RH.fx.push({lane,t:0,txt:pf?"완벽!":"좋아!"}); rhSound(RH_HZ[lane]*(pf?2:1),.18,.18); }
-function rhEnd(){ RH.state="over"; const s=Math.floor(RH.score); const fish=miniGiveFish(Math.floor(s/50)*Math.max(1,tapValue()));
-  const nb=s>(mini.rhythmBest||0); if(nb) mini.rhythmBest=s; saveMiniAll(); mgSet("rhBest",fmt(mini.rhythmBest||0));
-  mgOver("rhythm",nb?"최고 기록!":"공연 끝!",fmt(s)+"점",[`완벽 ${RH.perfect} · 좋아 ${RH.good} · 놓침 ${RH.miss} · 최대 콤보 ${RH.maxCombo}`,`${FISH_SVG} 클릭커 물고기 ${fmt(fish)}마리 받았어요`],()=>{ RH=rhNew(); }); }
+  RH.fx.push({lane,t:0,txt:pf?"완벽!":"좋아!"}); }
+function rhEnd(){ if(RH.stop) RH.stop(); RH.state="over"; const s=Math.floor(RH.score); const fish=miniGiveFish(Math.floor(s/50)*Math.max(1,tapValue()));
+  const nb=RH.ranked&&s>(mini.rhythmBest||0); if(nb){ mini.rhythmBest=s; saveMiniAll(); } mgSet("rhBest",fmt(mini.rhythmBest||0));
+  const acc=RH.notes.length?Math.round((RH.perfect+RH.good*.5)/RH.notes.length*100):0;
+  mgOver("rhythm",nb?"최고 기록!":"공연 끝!",fmt(s)+"점",[`♪ ${esc(RH.title||"")} · 정확도 ${acc}%`,`완벽 ${RH.perfect} · 좋아 ${RH.good} · 놓침 ${RH.miss} · 최대 콤보 ${RH.maxCombo}`,RH.ranked?"":"내 음악은 랭킹에 올라가지 않아요",`${FISH_SVG} 클릭커 물고기 ${fmt(fish)}마리 받았어요`].filter(Boolean),()=>{ RH=rhNew(); renderRhythm(true); }); }
 MG_GAMES.rhythm={step(dt){
-  const ctx=mgCtx($("#rhythmCanvas")); const now=RH.state==="play"?performance.now()-RH.start:0;
-  if(RH.state==="play"){ // 박자 소리
-    const b=Math.floor(now/RH.beat); if(b>=RH.nextBeat){ RH.nextBeat=b+1; rhSound(b%4===0?90:70,.08,.25,"sine"); if(b%2===1) rhSound(2200,.03,.04,"square"); }
-    for(const n of RH.notes) if(!n.hit&&!n.miss&&now-n.t>170){ n.miss=true; RH.miss++; RH.combo=0; RH.fx.push({lane:n.lane,t:0,txt:"놓침",bad:true}); }
-    if(now>RH_LEN+800) rhEnd();
-    mgSet("rhScore",fmt(Math.floor(RH.score))); mgSet("rhCombo",RH.combo); }
+  const ctx=mgCtx($("#rhythmCanvas")); const now=rhNow();
+  if(RH.state==="play"){ for(const n of RH.notes) if(!n.hit&&!n.miss&&now-n.t>170){ n.miss=true; RH.miss++; RH.combo=0; RH.fx.push({lane:n.lane,t:0,txt:"놓침",bad:true}); }
+    if(now>RH.len) rhEnd(); mgSet("rhScore",fmt(Math.floor(RH.score))); mgSet("rhCombo",RH.combo); }
   mgSky(ctx,"#1B1033","#3B1E54");
   const lw=GW/RH_LANES, pool=memPool();
   for(let i=0;i<RH_LANES;i++){ ctx.fillStyle=i%2?"rgba(255,255,255,.04)":"rgba(255,255,255,.08)"; ctx.fillRect(i*lw,0,lw,GH);
@@ -3376,14 +3427,30 @@ MG_GAMES.rhythm={step(dt){
     ctx.fillStyle="rgba(255,255,255,.75)"; ctx.font="20px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🐾",x,y+1); ctx.globalAlpha=1; }
   for(let i=0;i<RH_LANES;i++){ const p=pool[i]; drawRoundImg(ctx,p&&p.url,i*lw+lw/2,RH_HIT+50,28,RH_COL[i]); }
   RH.fx=RH.fx.filter(f=>(f.t+=dt)<40); for(const f of RH.fx){ ctx.globalAlpha=1-f.t/40; ctx.fillStyle=f.bad?"#FF6B5B":"#FFF4B0"; ctx.font="bold 24px sans-serif"; ctx.textAlign="center"; ctx.fillText(f.txt,f.lane*lw+lw/2,RH_HIT-40-f.t); ctx.globalAlpha=1; }
-  if(RH.state==="play"){ ctx.fillStyle="rgba(255,255,255,.25)"; ctx.fillRect(0,0,GW*Math.min(1,now/RH_LEN),6); }
-  if(RH.state==="ready") mgTapText(ctx,"눌러서 시작 · 소리를 켜 주세요",260);
+  if(RH.state==="play"){ ctx.fillStyle="rgba(255,255,255,.25)"; ctx.fillRect(0,0,GW*Math.min(1,Math.max(0,now)/RH.len),6); }
+  if(RH.state==="load") mgTapText(ctx,"곡을 분석하는 중…",260);
 }};
-function renderRhythm(){ if(!RH||RH.state==="over") RH=rhNew();
+function rhPickerHTML(){ const songs=Object.entries(RH_SONGS);
+  return `<div class="rhpick"><p class="rhh">노래 고르기</p><div class="rhsongs">${songs.map(([k,S])=>`<button class="rhsong ${rhSel.song===k?"on":""}" data-rhs="${k}"><span>${S.ico}</span><b>${S.title}</b><small>${S.bpm} BPM · ${Math.round(S.bars*4*60/S.bpm)}초</small></button>`).join("")}
+      <button class="rhsong ${rhSel.song==="mine"?"on":""}" data-rhs="mine"><span>📱</span><b>내 음악으로 하기</b><small>${rhMyFile?esc(rhMyFile.name).slice(0,18):"휴대폰의 음악 파일 고르기"}</small></button></div>
+    ${rhSel.song==="mine"?`<span class="btn ghost small pickwrap">음악 파일 고르기<input type="file" accept="audio/*" id="rhFile"></span><p class="note" style="margin:0">고른 파일은 서버에 올리지 않고 이 휴대폰에서만 써요. 앱이 박자와 높낮이를 듣고 발자국을 만들어요(앞 3분까지). 내 음악은 랭킹에는 올라가지 않아요.</p>`:""}
+    <p class="rhh">난이도</p><div class="memlv" role="radiogroup">${[["easy","쉬움"],["normal","보통"],["hard","어려움"]].map(([k,l])=>`<button role="radio" aria-checked="${rhSel.diff===k}" data-rhd="${k}">${l}</button>`).join("")}</div>
+    <button class="btn" id="rhGo">시작! 🎵</button><p class="note" style="margin:0;text-align:center">휴대폰 소리를 켜 주세요 (무음 모드면 안 들려요)</p></div>`; }
+function renderRhythm(force){ if(!RH||RH.state==="over") RH=rhNew();
   const cv=mgMount("rhythm",`<div><span>점수</span><b id="rhScore">0</b></div><div><span>콤보</span><b id="rhCombo">0</b></div><div><span>최고</span><b id="rhBest">${fmt(mini.rhythmBest||0)}</b></div>`,
-    "떨어지는 발자국이 아래 선에 닿을 때 그 줄을 눌러요. 딱 맞으면 '완벽!'(300점), 조금 빗나가면 '좋아!'(100점). 콤보가 쌓일수록 점수가 커져요. 1분짜리 곡이에요.");
-  if(!cv) return; cv.addEventListener("pointerdown",e=>{ e.preventDefault(); rhTap(mgPt(cv,e).x); }); }
-
+    "음악에 맞춰 떨어지는 발자국이 아래 선에 닿을 때 그 줄을 눌러요. 딱 맞으면 '완벽!'(300점), 조금 빗나가면 '좋아!'(100점). 콤보가 쌓일수록 점수가 커져요.");
+  if(!cv) return;
+  const box=cv.parentElement; const pk=document.createElement("div"); pk.className="rhover"; pk.id="rhPicker"; box.appendChild(pk);
+  const paint=()=>{ pk.hidden=RH.state!=="pick"; if(RH.state!=="pick") return; pk.innerHTML=rhPickerHTML();
+    pk.querySelectorAll("[data-rhs]").forEach(b=>b.onclick=()=>{ rhSel.song=b.dataset.rhs; try{ localStorage.setItem("httyd-rhsel",JSON.stringify(rhSel)); }catch(e){} paint(); });
+    pk.querySelectorAll("[data-rhd]").forEach(b=>b.onclick=()=>{ rhSel.diff=b.dataset.rhd; try{ localStorage.setItem("httyd-rhsel",JSON.stringify(rhSel)); }catch(e){} paint(); });
+    const f=$("#rhFile"); if(f) f.onchange=async()=>{ const file=f.files[0]; f.value=""; if(!file) return; if(file.size>40e6){ toast("파일이 너무 커요 (40MB까지)"); return; }
+      try{ toast("음악을 여는 중…"); const ab=await file.arrayBuffer(); const buf=await actx().decodeAudioData(ab); rhMyFile={name:file.name.replace(/\.[^.]+$/,""),buffer:buf,charts:{}}; paint(); toast("준비됐어요! 시작을 눌러요"); }
+      catch(e){ toast("이 파일은 열 수 없어요. mp3나 m4a 파일을 골라 주세요"); } };
+    $("#rhGo").onclick=async()=>{ actx(); await rhStart(); paint(); }; };
+  paint();
+  cv.addEventListener("pointerdown",e=>{ e.preventDefault(); rhTap(mgPt(cv,e).x); });
+}
 /* ---------- 4. 불꽃 그리기 마법 ---------- */
 const MG_SYMS={h:"─",v:"│",V:"V",A:"Λ",O:"○",Z:"Z"};
 const MG_TPL=(()=>{ const T={}, line=(pts)=>pts;

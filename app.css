@@ -131,6 +131,17 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .tm-hunger{background:linear-gradient(90deg,#E4572E,#F2C14E)!important}.tm-fun{background:linear-gradient(90deg,#D65CA8,#A05CD6)!important}.tm-energy{background:linear-gradient(90deg,#3FA7D6,#9BC53D)!important}
 .tmacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tmacts #tmGift{grid-column:1/-1}
 @media (prefers-reduced-motion:reduce){.tmpet,.tmzzz,.tmheart{animation:none}}
+
+.rhover{position:absolute;inset:0;z-index:3;background:rgba(20,10,40,.88);color:#fff;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.rhh{margin:0;font-weight:700}
+.rhsongs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rhsong{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:14px;border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
+.rhsong span{font-size:1.8rem}.rhsong small{opacity:.7;font-size:.72rem;word-break:keep-all;text-align:center}
+.rhsong.on{border-color:#F2C14E;background:rgba(242,193,78,.18)}
+.rhover .memlv button{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.25)}
+.rhover .note{color:rgba(255,255,255,.75)}
+.rhover .memlv button[aria-checked="true"]{color:#1b2a33;background:#F2C14E;border-color:#F2C14E}
+.rhover #rhGo{width:100%}
 .trprev{display:flex;flex-direction:column;gap:6px;background:color-mix(in srgb,#FFD34D 22%,var(--surface));border:2px solid #F2C14E;border-radius:14px;padding:12px}
 .trprev h3{margin:0}.trchamp{margin:0;font-family:var(--display);font-size:1.15rem;text-align:center}
 .trround{display:flex;flex-direction:column;gap:4px;margin:6px 0}.trround h4{margin:0;font-size:.9rem;opacity:.75}
