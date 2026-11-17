@@ -69,6 +69,14 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .hgrid{align-items:start}
 .hcard:has(details[open]){grid-column:1/-1}
 .hsum,.hdet,.hgo b{word-break:keep-all;overflow-wrap:anywhere}
+
+.pres{background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.pres h2{margin:0;font-size:1rem;display:flex;align-items:center;gap:6px}.pcount{color:var(--muted);font-weight:500;font-size:.85rem}
+.plist,.poff{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.poff{width:100%;padding-top:6px;border-top:1px dashed var(--line,#ddd)}
+.pchip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#ddd);border-radius:999px;padding:3px 10px 3px 8px;font-size:.85rem;min-width:0}
+.pchip b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:9em}.pchip small{color:var(--muted)}
+.pchip.on{border-color:color-mix(in srgb,#2EB872 55%,var(--line,#ddd))}.pchip.off{opacity:.75}
+.pdot{width:9px;height:9px;border-radius:50%;background:#9AA5AB;flex:none}.pdot.on{background:#2EB872;box-shadow:0 0 0 3px color-mix(in srgb,#2EB872 25%,transparent)}
 .evcard{gap:12px}
 .bankin{display:flex;gap:8px}.bankin input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);font-size:1rem}
 .banklist{display:flex;flex-direction:column;gap:8px}

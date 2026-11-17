@@ -3199,6 +3199,7 @@ function renderHome(){
   el.innerHTML=`<div class="home">${sam&&!tipOff&&th!=="dark"?`<div class="samtip"><div><b>휴대폰이 다크 모드인데 화면이 파랗게 번쩍이나요?</b>삼성 인터넷이 밝은 화면을 억지로 어둡게 칠하다가 생기는 일이에요. 아래 <b style="display:inline">'어두운 화면 켜기'</b>를 누르면 앱이 처음부터 어둡게 그려서 번쩍임이 사라져요. (또는 삼성 인터넷 ☰ → 설정 → 실험실 → '웹사이트 다크 테마 사용' 켜기)</div><div class="samb"><button class="btn small" id="samTipDark">어두운 화면 켜기</button><button class="btn ghost small" id="samTipX">닫기</button></div></div>`:""}
     <div class="hhello"><h1>${FB.name&&FB.name!=="관리자"?esc(FB.name)+"님, ":""}오늘은 뭐 할까?</h1>
       <div class="hstats"><span><svg class="gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z" fill="var(--gem)"/></svg>보석 <b>${fmt(gems)}</b></span><span>${COIN_SVG}코인 <b>${fmt(coins)}</b></span><span>${FISH_SVG}물고기 <b>${fmt(fish)}</b></span></div></div>
+    <section class="pres" aria-live="polite"><h2><span class="pdot on"></span>지금 접속 중 <span class="pcount" id="presN"></span></h2><div class="plist" id="presBox"><span class="note">불러오는 중…</span></div></section>
     ${HOME_SECTIONS.map(sec=>{ const items=sec.items.filter(it=>!it.owner||FB.isOwner); if(!items.length) return "";
       return `<section class="hsec"><h2>${sec.title}</h2><div class="hgrid">${items.map(it=>`<div class="hcard" style="--hc:${it.col}">
         <button class="hgo" data-hgo="${it.id}"><span class="hico" aria-hidden="true">${it.ico}</span><b>${it.name}</b><span class="hsum">${it.sum}</span></button>
@@ -3209,9 +3210,22 @@ function renderHome(){
   el.querySelectorAll("[data-th]").forEach(b=>b.onclick=()=>{ berkTheme(b.dataset.th); renderHome(); });
   const sd=$("#samTipDark"); if(sd) sd.onclick=()=>{ berkTheme("dark"); renderHome(); };
   const st=$("#samTipX"); if(st) st.onclick=()=>{ try{ localStorage.setItem("berk-samtip","off"); }catch(e){} renderHome(); };
+  presInit();
   const all=HOME_SECTIONS.flatMap(s=>s.items);
   el.querySelectorAll("[data-hgo]").forEach(b=>b.onclick=()=>{ const it=all.find(x=>x.id===b.dataset.hgo); if(it) it.go(); });
 }
+
+/* 접속 표시 (홈 위쪽) */
+let presUnsub=null, presTick=null;
+function presAgo(ms){ const m=Math.floor(ms/60000); if(m<1) return "방금 전"; if(m<60) return m+"분 전"; const hh=Math.floor(m/60); if(hh<24) return hh+"시간 전"; const d=Math.floor(hh/24); return d<7?d+"일 전":"오래 전"; }
+function presPaint(v){ const box=document.getElementById("presBox"); if(!box) return;
+  if(v===null){ box.innerHTML=`<span class="note">접속 정보를 볼 수 없어요 (관리자가 새 보안 규칙을 넣어야 해요)</span>`; return; }
+  const on=v.filter(x=>x.online), off=v.filter(x=>!x.online).slice(0,20);
+  const n=document.getElementById("presN"); if(n) n.textContent=on.length?on.length+"명":"";
+  const chip=x=>`<span class="pchip ${x.online?"on":"off"}"><span class="pdot ${x.online?"on":""}"></span><b>${esc(x.name||"이름 없음")}${x.me?" (나)":""}</b>${x.online?`<small>온라인</small>`:`<small>${presAgo(x.ago)}</small>`}</span>`;
+  box.innerHTML=(on.length?on.map(chip).join(""):`<span class="note">지금은 아무도 없어요</span>`)+(off.length?`<div class="poff"><span class="note">오프라인</span>${off.map(chip).join("")}</div>`:""); }
+function presInit(){ if(!window.FB||!FB.presence) return; if(!presUnsub) presUnsub=FB.presence.watch(presPaint); else presPaint(FB.presence.view());
+  if(!presTick) presTick=setInterval(()=>{ if(document.getElementById("presBox")&&document.visibilityState==="visible") presPaint(FB.presence.view()); },30000); }
 
 // ===================== 이벤트: 계절, 저금통, 생일, 시즌 패스 =====================
 const KST=()=>new Date(Date.now()+9*3600e3); // 한국 시간 기준 (getUTC* 로 읽어요)

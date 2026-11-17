@@ -135,6 +135,7 @@
     started=true; document.body.classList.toggle("is-owner",isOwner);
     gate(`<h1>버크 드래곤 도감</h1><p id="gProg">사진 불러오는 중…</p>`);
     readyResolve({db:dbShim,assets:assetsShim});
+    setTimeout(()=>presence.startMe(),1500);
   }
 
   /* ---- 관리자 도구 (앱의 사진 탭 맨 위에 보여요) ---- */
@@ -212,7 +213,24 @@
         tx.update(ref,{hp:v.hp-d}); tx.set(mine,{dmg:Math.floor(prev.dmg||0)+d,n:Math.floor(prev.n||0)+1,name:myName.slice(0,20)||"이름 없음",at:firebase.firestore.FieldValue.serverTimestamp()});
         return {dealt:d,hp:v.hp-d}; }); }
   };
-  window.FB={ publishBlobs, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  /* 접속 표시: presence/{uid} = {name, on, at(서버 시간)}. 보고 있는 동안 1분마다, 나가면 on:false */
+  const presence=(()=>{ let timer=null, lastW=0, skew=0, unsub=null; const subs=new Set(); let list=[];
+    const ts=v=>v&&typeof v.toMillis==="function"?v.toMillis():(+v||0);
+    function write(on){ if(!user||!fs) return; const now=Date.now(); if(on&&now-lastW<8000) return; lastW=now;
+      fs.doc("presence/"+user.uid).set({name:(myName||"이름 없음").slice(0,20),on:!!on,at:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{}); }
+    function beat(){ if(document.visibilityState==="visible") write(true); }
+    function startMe(){ if(timer) return; beat(); timer=setInterval(beat,60000);
+      document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ lastW=0; beat(); } else write(false); });
+      addEventListener("pagehide",()=>write(false)); }
+    function ensure(){ if(unsub||!fs) return; unsub=fs.collection("presence").onSnapshot(s=>{
+        list=s.docs.map(d=>{ const v=d.data({serverTimestamps:"estimate"})||{}; return {uid:d.id,me:d.id===(user&&user.uid),name:String(v.name||"").slice(0,20),on:!!v.on,at:ts(v.at),pending:d.metadata&&d.metadata.hasPendingWrites}; });
+        const mine=list.find(x=>x.me&&!x.pending&&x.on); if(mine&&Math.abs(Date.now()-lastW)<20000) skew=mine.at-lastW;
+        subs.forEach(f=>f(view())); },()=>{ list=[]; subs.forEach(f=>f(null)); }); }
+    function view(){ const now=Date.now()+skew; return list.map(x=>Object.assign({},x,{online:x.me||(x.on&&now-x.at<150000),ago:Math.max(0,now-x.at)}))
+      .sort((a,b)=>(b.online-a.online)||(b.me-a.me)||(a.ago-b.ago)); }
+    return { startMe, watch(f){ ensure(); subs.add(f); f(list.length?view():[]); return ()=>subs.delete(f); }, view };
+  })();
+  window.FB={ publishBlobs, presence, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{
