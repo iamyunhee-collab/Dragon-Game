@@ -1177,13 +1177,20 @@ const bv={sub:"adv",open:null,setOpen:null};
 try{const v=JSON.parse(localStorage.getItem("httyd-battle")||"null"); if(v){ bset=v.bset||{}; cardLv=v.cardLv||{}; team=v.team||[]; supPets=Array.isArray(v.supPets)?v.supPets:(v.supPet?[v.supPet]:[]); bprog=Object.assign({cleared:0,bossPaid:{}},v.bprog||{}); }}catch(e){}
 function saveBLocal(){ try{localStorage.setItem("httyd-battle",JSON.stringify({bset,cardLv,team,supPets,bprog,extraSlots}));}catch(e){} }
 const dirtyDocs={}; // 아직 저장 중인 문서는 서버에서 온 옛 값으로 덮어쓰지 않아요
+const SAVERS=[];
 function makeSaver(path,get){
   let t=null,busy=false,again=false;
   const flush=async()=>{ if(!cloud){ dirtyDocs[path]=false; return; } if(busy){again=true;return;} busy=true;
     try{ await cloud.db.doc(path).set(JSON.parse(JSON.stringify(get()))); }catch(e){}
     busy=false; if(again){again=false; flush(); return;} setTimeout(()=>{ if(!busy&&!t) dirtyDocs[path]=false; },800); };
-  return ()=>{ dirtyDocs[path]=true; saveBLocal(); clearTimeout(t); t=setTimeout(()=>{ t=null; flush(); },500); };
+  const save=()=>{ dirtyDocs[path]=true; saveBLocal(); clearTimeout(t); t=setTimeout(()=>{ t=null; flush(); },500); };
+  save.now=()=>{ dirtyDocs[path]=true; clearTimeout(t); t=null; flush(); }; // 기다리지 않고 바로 저장 (보상 받기 등)
+  save.pending=()=>!!t; SAVERS.push(save); return save;
 }
+// 앱을 닫거나 다른 앱으로 넘어가면 기다리던 저장을 바로 해요
+function flushSavers(){ for(const s of SAVERS) if(s.pending()) s.now(); }
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) flushSavers(); });
+window.addEventListener("pagehide",flushSavers);
 const saveBset=makeSaver("settings/battle",()=>({map:bset}));
 const saveCards=makeSaver("settings/cards",()=>({lv:cardLv,team,pets:supPets.slice(0,petSlots()),pet:supPets[0]||"",slots:extraSlots}));
 const saveProg=makeSaver("settings/bprog",()=>bprog);
@@ -3194,6 +3201,10 @@ function giveAll(g){ // 보상 주기 (물고기는 시즌 경험치 없이 직�
   if(g.fish){ ck.fish=(ck.fish||0)+Math.floor(g.fish); saveCkAll(); }
   if(g.bk){ bk.inv=bk.inv||{}; bk.inv[g.bk]=(bk.inv[g.bk]||0)+1; saveBkAll(); }
   updateTop(); }
+// 저장소에서 내 기록을 다 불러오기 전에는 저장하지 않아요 (빈 기록으로 덮어써서 보상을 또 받는 문제 방지)
+const evLoaded={}, evPend={};
+function guardSave(path,saver){ const f=()=>{ if(!evLoaded[path]){ evPend[path]=true; return; } saver(); }; f.now=()=>{ if(!evLoaded[path]){ evPend[path]=true; return; } saver.now(); }; return f; }
+function evReady(path){ if(evLoaded[path]) return true; toast("기록을 불러오는 중이에요. 잠시 뒤 다시 눌러 주세요"); return false; }
 const giftText=g=>[g.gems&&`보석 ${fmt(g.gems)}개`,g.coins&&`코인 ${fmt(g.coins)}개`,g.fish&&`물고기 ${fmt(g.fish)}마리`,g.tickets&&`펫 뽑기권 ${g.tickets}장`,g.bk&&`버크 건물 '${BK_B[g.bk].name}'`].filter(Boolean).join(", ");
 // 공용 시트(아래에서 올라오는 창)
 function openSheet(html,bind,cls){ let m=$("#evSheet"); if(!m){ m=document.createElement("div"); m.id="evSheet"; m.className="rankmodal"; document.body.appendChild(m); }
@@ -3213,14 +3224,14 @@ const SEASON_INFO={spring:{name:"봄",ico:"🌸",bonus:"양 목장 +20%",k:"farm
 function seasonMult(k){ const s=SEASON_INFO[bkSeason()]; if(s.k==="*") return 1.1; return s.k===k?1.2:1; }
 
 /* ---------- 25. 보석 저금통: 7일 맡기면 10% 이자 ---------- */
-let bank={deps:[]}; const saveBank=makeSaver("settings/bank",()=>bank);
+let bank={deps:[]}; const saveBank=guardSave("settings/bank",makeSaver("settings/bank",()=>bank));
 const BANK_DAYS=7, BANK_RATE=0.10, BANK_MIN=10;
 function bankDeposit(n){ n=Math.floor(+n||0); if(n<BANK_MIN){ toast(`보석 ${BANK_MIN}개부터 맡길 수 있어요`); return false; } if(gems<n){ toast("보석이 모자라요"); return false; }
-  bump("gems",-n); bank.deps=[...(bank.deps||[]),{amt:n,at:Date.now(),id:Date.now()+"-"+Math.floor(Math.random()*1e6)}]; saveBank(); spXP(10); return true; }
+  bump("gems",-n); bank.deps=[...(bank.deps||[]),{amt:n,at:Date.now(),id:Date.now()+"-"+Math.floor(Math.random()*1e6)}]; saveBank.now(); flushSavers(); spXP(10); return true; }
 function bankTake(id){ const d=(bank.deps||[]).find(x=>x.id===id); if(!d) return; const ripe=Date.now()-d.at>=BANK_DAYS*864e5;
-  const back=ripe?Math.floor(d.amt*(1+BANK_RATE)):d.amt; bank.deps=bank.deps.filter(x=>x.id!==id); saveBank(); bump("gems",back);
+  const back=ripe?Math.floor(d.amt*(1+BANK_RATE)):d.amt; bank.deps=bank.deps.filter(x=>x.id!==id); saveBank.now(); bump("gems",back); flushSavers();
   toast(ripe?`이자까지 보석 ${fmt(back)}개를 찾았어요!`:`보석 ${fmt(back)}개를 찾았어요 (이자 없이)`); }
-function openBank(){
+function openBank(){ if(!evReady("settings/bank")) return;
   const deps=bank.deps||[], now=Date.now();
   const sum=deps.reduce((a,d)=>a+d.amt,0);
   openSheet(`<div class="rkhead"><h2>🐷 보석 저금통</h2><button class="btn ghost small" data-evclose>닫기</button></div>
@@ -3240,14 +3251,14 @@ function openBank(){
 
 /* ---------- 28. 생일: 관리자가 생일을 넣어 두면, 그날 접속했을 때 축하하고 보상을 골라요 ---------- */
 let evCfg={bday:{tickets:3,gems:3000,coins:300000,fish:50000},msg:"생일 축하해! 버크의 모든 드래곤이 축하하고 있어 🎉"};
-let bdayDone={year:""}; const saveBday=makeSaver("settings/bday",()=>bdayDone);
-function checkBirthday(){ const b=FB.bday; if(!b||b!==mmdd()) return; const y=dayKey().slice(0,4); if(bdayDone.year===y) return;
+let bdayDone={year:""}; const saveBday=guardSave("settings/bday",makeSaver("settings/bday",()=>bdayDone));
+function checkBirthday(){ if(!evLoaded["settings/bday"]){ setTimeout(checkBirthday,1500); return; } const b=FB.bday; if(!b||b!==mmdd()) return; const y=dayKey().slice(0,4); if(bdayDone.year===y) return;
   confetti(); const r=evCfg.bday||{};
   const opts=[["tickets","🎟️",`펫 뽑기권 ${r.tickets||0}장`],["gems","💎",`보석 ${fmt(r.gems||0)}개`],["coins","🪙",`코인 ${fmt(r.coins||0)}개`],["fish","🐟",`물고기 ${fmt(r.fish||0)}마리`]].filter(o=>r[o[0]]);
   openSheet(`<div class="bdayhead"><div class="bdaycake">🎂</div><h2>${esc(FB.name||"")}${FB.name?"님, ":""}생일 축하해요!</h2><p>${esc(evCfg.msg||"")}</p></div>
     <p style="margin:0;font-weight:700;text-align:center">생일 선물을 하나 골라요!</p>
     <div class="bdayopts">${opts.map(o=>`<button class="bdayopt" data-bd="${o[0]}"><span>${o[1]}</span><b>${o[2]}</b></button>`).join("")}</div>`,
-   (m,close)=>{ m.querySelectorAll("[data-bd]").forEach(b=>b.onclick=()=>{ const k=b.dataset.bd; giveAll({[k]:r[k]}); bdayDone={year:y,pick:k}; saveBday(); confetti();
+   (m,close)=>{ m.querySelectorAll("[data-bd]").forEach(b=>b.onclick=()=>{ const k=b.dataset.bd; bdayDone={year:y,pick:k}; saveBday.now(); giveAll({[k]:r[k]}); flushSavers(); confetti();
       m.querySelector(".evcard").innerHTML=`<div class="bdayhead"><div class="bdaycake">🎁</div><h2>선물을 받았어요!</h2><p>${giftText({[k]:r[k]})}</p><button class="btn" data-evclose>고마워요!</button></div>`;
       m.querySelector("[data-evclose]").onclick=close; }); },"bday");
 }
@@ -3259,14 +3270,14 @@ function spReward(t){ // 단계별 보상
   if(t===100) return {bk:"santa_statue",tickets:10,gems:20000};
   if(t%5===0) return {tickets:1};
   const k=["gems","fish","coins"][t%3], base={gems:100,fish:3000,coins:30000}[k]; return {[k]:base*Math.ceil(t/3)}; }
-let sp={id:SEASON.id,xp:0,claimed:{},day:""}; const saveSp=makeSaver("settings/season",()=>sp);
+let sp={id:SEASON.id,xp:0,claimed:{},day:""}, spPendXP=0; const saveSp=guardSave("settings/season",makeSaver("settings/season",()=>sp));
 const spActive=()=>{ const d=dayKey(); return d>=SEASON.start&&d<=SEASON.end; };
 const spTier=()=>Math.min(SEASON.tiers,Math.floor((sp.xp||0)/SEASON.xp));
-function spXP(n){ if(!spActive()||!cloud) return; if(sp.id!==SEASON.id) sp={id:SEASON.id,xp:0,claimed:{},day:""};
+function spXP(n){ if(!spActive()||!cloud) return; if(!evLoaded["settings/season"]){ spPendXP+=n; return; } if(sp.id!==SEASON.id) sp={id:SEASON.id,xp:0,claimed:{},day:""};
   const before=spTier(); sp.xp=Math.min(SEASON.tiers*SEASON.xp,(sp.xp||0)+n); saveSp();
   if(spTier()>before){ toast(`${SEASON.ico} 시즌 패스 ${spTier()}단계! 보상을 받으러 가요`); } }
-function spDaily(){ if(!spActive()) return; const d=dayKey(); if(sp.day!==d){ sp.day=d; spXP(50); } }
-function openSeason(){
+function spDaily(){ if(!spActive()) return; if(!evLoaded["settings/season"]){ setTimeout(spDaily,1500); return; } const d=dayKey(); if(sp.day!==d){ sp.day=d; spXP(50); } }
+function openSeason(){ if(!evReady("settings/season")) return;
   const t=spTier(), inTier=(sp.xp||0)-t*SEASON.xp, max=t>=SEASON.tiers;
   const end=new Date(SEASON.end+"T23:59:59+09:00"), left=Math.max(0,Math.ceil((end-Date.now())/864e5));
   openSheet(`<div class="rkhead"><h2>${SEASON.ico} ${SEASON.name} 패스</h2><button class="btn ghost small" data-evclose>닫기</button></div>
@@ -3280,17 +3291,24 @@ function openSeason(){
       return `<div class="sprow ${open?"open":""} ${got?"got":""} ${special?"special":""}"><span class="spn">${n}</span><span class="spr">${special?`${BK_B[r.bk].ico} `:""}${giftText(r)}</span>
         ${got?`<span class="note">받음 ✓</span>`:open?`<button class="btn small" data-spget="${n}">받기</button>`:`<span class="note">🔒</span>`}</div>`; }).join("")}</div>`,
   (m)=>{ const sk=$("#spSkip"); if(sk) sk.onclick=()=>{ if(gems<SEASON.skip){ toast("보석이 모자라요"); return; } if(!sk.dataset.armed){ sk.dataset.armed="1"; sk.textContent=`보석 ${fmt(SEASON.skip)}개를 쓸까요? 한 번 더 누르세요`; return; }
-      bump("gems",-SEASON.skip); sp.xp=Math.min(SEASON.tiers*SEASON.xp,(spTier()+1)*SEASON.xp); saveSp(); toast(`${spTier()}단계로 건너뛰었어요!`); openSeason(); };
-    m.querySelectorAll("[data-spget]").forEach(b=>b.onclick=()=>{ const n=+b.dataset.spget; if(sp.claimed&&sp.claimed[n]) return; const r=spReward(n);
-      sp.claimed=Object.assign({},sp.claimed,{[n]:true}); saveSp(); giveAll(r); if(r.bk) confetti(); toast(`${giftText(r)}을(를) 받았어요!`); openSeason(); }); });
+      bump("gems",-SEASON.skip); sp.xp=Math.min(SEASON.tiers*SEASON.xp,(spTier()+1)*SEASON.xp); saveSp.now(); flushSavers(); toast(`${spTier()}단계로 건너뛰었어요!`); openSeason(); };
+    m.querySelectorAll("[data-spget]").forEach(b=>b.onclick=()=>{ const n=+b.dataset.spget; if(sp.claimed&&sp.claimed[n]) return; if(n>spTier()) return; b.disabled=true; const r=spReward(n);
+      sp.claimed=Object.assign({},sp.claimed,{[n]:true}); saveSp.now(); giveAll(r); flushSavers(); if(r.bk) confetti(); toast(`${giftText(r)}을(를) 받았어요!`); openSeason(); }); });
 }
 
 /* ---------- 저장소 연결 ---------- */
 function initEventsCloud(d){
-  const sub=(path,setter)=>d.doc(path).onSnapshot(s=>{ if(s.exists&&!dirtyDocs[path]&&!s.metadata.hasPendingWrites) setter(JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
-  sub("settings/bank",v=>{ bank=Object.assign({deps:[]},v); });
-  sub("settings/bday",v=>{ bdayDone=Object.assign({year:""},v); });
-  sub("settings/season",v=>{ sp=v.id===SEASON.id?Object.assign({claimed:{}},v):{id:SEASON.id,xp:0,claimed:{},day:""}; });
+  const sub=(path,setter,saver)=>d.doc(path).onSnapshot(s=>{
+    const first=!evLoaded[path];
+    if(s.exists&&!dirtyDocs[path]&&!s.metadata.hasPendingWrites) setter(JSON.parse(JSON.stringify(s.data()||{})),first);
+    else if(first&&!s.exists) setter(null,true);
+    if(first){ evLoaded[path]=true; if(evPend[path]){ evPend[path]=false; saver(); } } },()=>{});
+  sub("settings/bank",v=>{ if(v) bank=Object.assign({deps:[]},v); },()=>saveBank());
+  sub("settings/bday",v=>{ if(v) bdayDone=Object.assign({year:""},v); },()=>saveBday());
+  sub("settings/season",(v,first)=>{ // 받은 단계는 절대 되돌아가지 않게 합쳐요
+    const base=v&&v.id===SEASON.id?Object.assign({claimed:{}},v):{id:SEASON.id,xp:0,claimed:{},day:""};
+    if(!first){ base.claimed=Object.assign({},base.claimed,sp.claimed||{}); base.xp=Math.max(base.xp||0,sp.xp||0); }
+    sp=base; if(first&&spPendXP){ sp.xp=Math.min(SEASON.tiers*SEASON.xp,(sp.xp||0)+spPendXP); spPendXP=0; evPend["settings/season"]=true; } },()=>saveSp());
   d.doc("settings/events").onSnapshot(s=>{ if(s.exists) evCfg=Object.assign({},evCfg,JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
   setTimeout(()=>{ spDaily(); checkBirthday(); },3500);
 }
@@ -3299,7 +3317,7 @@ function initEventsCloud(d){
 
 /* ---------- 19. 드래곤 키우기 ---------- */
 let tama={sid:"",hunger:80,fun:80,energy:80,sleeping:false,last:Date.now(),xp:0,lv:1,giftDay:"",taps:0};
-const saveTama=makeSaver("settings/tama",()=>tama);
+const saveTama=guardSave("settings/tama",makeSaver("settings/tama",()=>tama));
 const TAMA_RATE={hunger:-6,fun:-5,energy:-4}; // 1시간마다
 function tamaTick(){ const now=Date.now(), h=Math.min(48,(now-(tama.last||now))/3600e3); if(h<=0) return;
   const cl=v=>Math.max(0,Math.min(100,v));
@@ -3312,6 +3330,7 @@ function tamaMood(){ if(tama.sleeping) return ["😴","쿨쿨… 자는 중이�
   if(tama.hunger<25) return ["😢","배고파요… 밥 주세요!"]; if(tama.energy<25) return ["🥱","너무 졸려요. 재워 주세요"]; if(tama.fun<25) return ["😞","심심해요. 놀아 주세요!"];
   if(lo>=70) return ["😄","최고로 행복해요!"]; if(lo>=45) return ["🙂","기분 좋아요"]; return ["😐","조금 힘들어요"]; }
 function renderTama(){
+  if(!evLoaded["settings/tama"]&&cloud){ const el0=$("#clickView"); if(el0){ el0.innerHTML=mgTabsHtml()+`<p class="note">드래곤을 불러오는 중…</p>`; bindMgTabs(); } setTimeout(()=>{ if(view==="click"&&mgMode==="tama") renderTama(); },700); return; }
   const el=$("#clickView"); if(!el) return; tamaTick();
   const sid=tamaSid(), ph=sid&&cardPhoto(sid), [face,say]=tamaMood(), own=ckOwned(), feedCost=100*tama.lv, today=dayKey(), canGift=tama.giftDay!==today&&Math.min(tama.hunger,tama.fun,tama.energy)>=50;
   const bar=(k,ico,lab)=>`<div class="tmbar"><span>${ico} ${lab}</span><div class="bankbar"><i class="tm-${k}" style="width:${tama[k]}%"></i></div><b>${Math.round(tama[k])}</b></div>`;
@@ -3337,7 +3356,7 @@ function renderTama(){
   $("#tmFeed").onclick=()=>{ if(tama.hunger>=95){ toast("배불러요! 나중에 주세요"); return; } if((ck.fish||0)<feedCost){ toast("물고기가 모자라요. 클릭커에서 잡아 오세요"); return; }
     ck.fish-=feedCost; saveCkAll(); tama.hunger=Math.min(100,tama.hunger+25); tamaXP(5); spXP(5); save(); toast("냠냠! 맛있어요"); renderTama(); };
   $("#tmSleep").onclick=()=>{ tama.sleeping=!tama.sleeping; save(); renderTama(); };
-  $("#tmGift").onclick=()=>{ if(!canGift) return; const g={gems:20*tama.lv,fish:500*tama.lv}; tama.giftDay=today; giveAll(g); tamaXP(10); save(); confetti(); toast(`선물: ${giftText(g)}!`); renderTama(); };
+  $("#tmGift").onclick=()=>{ if(!canGift) return; const g={gems:20*tama.lv,fish:500*tama.lv}; tama.giftDay=today; saveTama.now(); giveAll(g); tamaXP(10); flushSavers(); confetti(); toast(`선물: ${giftText(g)}!`); renderTama(); };
   el.querySelectorAll("[data-tmpick]").forEach(b=>b.onclick=()=>{ tama.sid=b.dataset.tmpick; save(); renderTama(); });
 }
 
@@ -3571,7 +3590,8 @@ function renderTetris(){ if(!TT||TT.state==="over") TT=ttNew();
 document.addEventListener("keydown",e=>{ if(view!=="click"||mgMode!=="tetris"||!TT||e.target.closest("input,textarea")) return;
   const m={ArrowLeft:()=>ttMove(-1),ArrowRight:()=>ttMove(1),ArrowUp:ttRotate,ArrowDown:ttDown," ":ttHard}; if(m[e.key]){ e.preventDefault(); m[e.key](); } });
 
-function initG5Cloud(d){ d.doc("settings/tama").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tama"]&&!s.metadata.hasPendingWrites){ tama=Object.assign({},tama,JSON.parse(JSON.stringify(s.data()||{}))); if(view==="click"&&mgMode==="tama") renderTama(); } },()=>{}); }
+function initG5Cloud(d){ d.doc("settings/tama").onSnapshot(s=>{ const first=!evLoaded["settings/tama"]; if(s.exists&&!dirtyDocs["settings/tama"]&&!s.metadata.hasPendingWrites){ tama=Object.assign({},tama,JSON.parse(JSON.stringify(s.data()||{}))); }
+  if(first){ evLoaded["settings/tama"]=true; if(evPend["settings/tama"]){ evPend["settings/tama"]=false; saveTama(); } } if(view==="click"&&mgMode==="tama") renderTama(); },()=>{}); }
 
 // ===================== 주간 토너먼트 · 레이드 보스 =====================
 function weekStart(off=0){ const d=KST(); const wd=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-wd+off*7); return d.toISOString().slice(0,10); } // 월요일
@@ -3603,7 +3623,7 @@ function tourRun(entries,week){ // 전투력 순으로 시드 배정, 빈자리�
     rounds.push(ms); cur=nxt; }
   const champ=cur[0], fin=rounds[rounds.length-1][0], ru=fin.w===(fin.a&&fin.a.uid)?fin.b:fin.a;
   return {week,size,rounds,champion:{uid:champ.uid,name:champ.name},runnerUp:ru||null,count:ps.length}; }
-let tourPrev=null, tourPrevLoaded=false, tourClaim={claimed:{}}; const saveTour=makeSaver("settings/tour",()=>tourClaim);
+let tourPrev=null, tourPrevLoaded=false, tourClaim={claimed:{}}; const saveTour=guardSave("settings/tour",makeSaver("settings/tour",()=>tourClaim));
 const TOUR_PRIZE={1:{tickets:2,coins:100000,gems:1000},2:{tickets:1,coins:50000,gems:500},0:{coins:10000,gems:100}};
 const roundName=(i,total)=>{ const n=Math.pow(2,total-i); return n===2?"결승":n===4?"4강":`${n}강`; };
 function tourPlace(t,uid){ if(!t) return null; if(t.champion&&t.champion.uid===uid) return 1; if(t.runnerUp&&t.runnerUp.uid===uid) return 2;
@@ -3630,11 +3650,11 @@ function tourHTML(){
     ${live?bracket(live)+`<p class="trchamp">지금대로라면 👑 ${esc(live.champion.name||"")} 우승</p>`:`<p class="note">팀을 등록한 사람이 2명 이상이면 대진표가 나와요.</p>`}
   </div>`;
 }
-function tourBind(el){ const c=$("#tourClaim"); if(c) c.onclick=()=>{ const pl=tourPlace(tourPrev,FB.uid); if(pl==null||tourClaim.claimed[tourPrev.week]) return;
-  const g=TOUR_PRIZE[pl]; tourClaim.claimed=Object.assign({},tourClaim.claimed,{[tourPrev.week]:true}); saveTour(); giveAll(g); confetti(); toast(`토너먼트 상품: ${giftText(g)}!`); renderBattle(); }; }
+function tourBind(el){ const c=$("#tourClaim"); if(c) c.onclick=()=>{ if(!evReady("settings/tour")) return; const pl=tourPlace(tourPrev,FB.uid); if(pl==null||tourClaim.claimed[tourPrev.week]) return;
+  const g=TOUR_PRIZE[pl]; tourClaim.claimed=Object.assign({},tourClaim.claimed,{[tourPrev.week]:true}); saveTour.now(); giveAll(g); flushSavers(); confetti(); toast(`토너먼트 상품: ${giftText(g)}!`); renderBattle(); }; }
 
 /* ---------- 14. 레이드 보스: 모두가 함께 때리는 거대 보스 ---------- */
-let raidDoc=null, raidDmg=[], raidMine={day:"",n:0,claimed:{}}, raidUnsub=null; const saveRaid=makeSaver("settings/raid",()=>raidMine);
+let raidDoc=null, raidDmg=[], raidMine={day:"",n:0,claimed:{}}, raidUnsub=null; const saveRaid=guardSave("settings/raid",makeSaver("settings/raid",()=>raidMine));
 const RAID_PER_DAY=3;
 const RAID_PRIZE=place=>place===1?{tickets:3,gems:3000,coins:300000}:place===2?{tickets:2,gems:2000,coins:200000}:place===3?{tickets:1,gems:1500,coins:150000}:{gems:500,coins:50000};
 async function raidInit(){ const rid=weekId();
@@ -3646,7 +3666,7 @@ async function raidInit(){ const rid=weekId();
 let raidBusy=false, raidLast=null;
 const raidLeft=()=>raidMine.day===dayKey()?Math.max(0,RAID_PER_DAY-(raidMine.n||0)):RAID_PER_DAY;
 async function raidAttack(){
-  if(!raidDoc||raidDoc.hp<=0||raidBusy) return; if(!raidLeft()){ toast("오늘 공격 기회를 다 썼어요. 내일 또 와요!"); return; }
+  if(!raidDoc||raidDoc.hp<=0||raidBusy) return; if(!evReady("settings/raid")) return; if(!raidLeft()){ toast("오늘 공격 기회를 다 썼어요. 내일 또 와요!"); return; }
   const mine=myArenaTeam(); if(!mine.length){ toast("먼저 팀을 골라 주세요"); bv.sub="cards"; renderBattle(); return; }
   raidBusy=true; const A=simTeam(mine), avgAtk=A.reduce((s,u)=>s+u.atk,0)/A.length, avgHp=A.reduce((s,u)=>s+u.max,0)/A.length;
   const boss={sid:raidDoc.boss,hp:9e18,max:9e18,atk:Math.max(1,Math.round(avgHp*0.12+avgAtk*0.5)),sk:{type:"smash",pow:2.5,cd:4},ch:0,stun:0,shield:0};
@@ -3669,11 +3689,11 @@ function raidHTML(){
     <ol class="rklist">${raidDmg.map((d,i)=>`<li class="${d.me?"me":""}"><span class="rkp">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><b>${esc(d.name||"이름 없음")}${d.me?" (나)":""}</b><span class="rks">${fmt(d.dmg||0)}</span><span class="rkt">${d.n||0}번</span></li>`).join("")||`<p class="note">아직 아무도 공격하지 않았어요. 첫 공격의 주인공이 되어 보세요!</p>`}</ol></div>`;
 }
 function raidBind(el){ const g=$("#raidGo"); if(g) g.onclick=raidAttack;
-  const c=$("#raidClaim"); if(c) c.onclick=()=>{ const my=raidDmg.find(d=>d.me); if(!my||(raidMine.claimed||{})[raidDoc.week]) return; const pl=raidDmg.indexOf(my)+1, g2=RAID_PRIZE(pl);
-    raidMine.claimed=Object.assign({},raidMine.claimed,{[raidDoc.week]:true}); saveRaid(); giveAll(g2); confetti(); toast(`레이드 보상: ${giftText(g2)}!`); renderBattle(); }; }
+  const c=$("#raidClaim"); if(c) c.onclick=()=>{ if(!evReady("settings/raid")) return; const my=raidDmg.find(d=>d.me); if(!my||(raidMine.claimed||{})[raidDoc.week]) return; const pl=raidDmg.indexOf(my)+1, g2=RAID_PRIZE(pl);
+    raidMine.claimed=Object.assign({},raidMine.claimed,{[raidDoc.week]:true}); saveRaid.now(); giveAll(g2); flushSavers(); confetti(); toast(`레이드 보상: ${giftText(g2)}!`); renderBattle(); }; }
 function initG6Cloud(d){
-  d.doc("settings/tour").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tour"]) tourClaim=Object.assign({claimed:{}},JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
-  d.doc("settings/raid").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/raid"]) raidMine=Object.assign({day:"",n:0,claimed:{}},JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
+  d.doc("settings/tour").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tour"]&&!s.metadata.hasPendingWrites){ const v=JSON.parse(JSON.stringify(s.data()||{})); tourClaim={claimed:Object.assign({},v.claimed||{},tourClaim.claimed||{})}; } evLoaded["settings/tour"]=true; },()=>{});
+  d.doc("settings/raid").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/raid"]&&!s.metadata.hasPendingWrites){ const v=JSON.parse(JSON.stringify(s.data()||{})); raidMine=Object.assign({day:"",n:0},v,{claimed:Object.assign({},v.claimed||{},raidMine.claimed||{})}); } evLoaded["settings/raid"]=true; },()=>{});
   setTimeout(()=>{ tourInit(); raidInit(); },2500); }
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }

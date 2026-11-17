@@ -30,7 +30,7 @@
     const wait=THROTTLE_MS-(Date.now()-e.last);
     if(wait<=0) flushOne(path); else if(!e.t) e.t=setTimeout(()=>flushOne(path),wait);
     return pr; }
-  function wrapDoc(path){ const ref=fs.doc(path); if(!path.startsWith("users/")) return ref;
+  function wrapDoc(path){ const ref=fs.doc(path); if(!path.startsWith("users/")||/\/settings\/(season|bank|bday|tour|raid|tama)$/.test(path)) return ref;
     return { id:ref.id, path, get:o=>ref.get(o), update:v=>ref.update(v), onSnapshot:(...a)=>ref.onSnapshot(...a),
       delete:()=>{ const e=pend.get(path); if(e){ e.has=false; clearTimeout(e.t); } return ref.delete(); },
       set:(v,o)=>o&&o.merge?ref.set(v,o):throttledSet(path,v) }; }
