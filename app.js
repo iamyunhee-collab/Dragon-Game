@@ -2559,7 +2559,7 @@ const BK_B={
   autumn_statue:{name:"단풍 스톰플라이 동상",ico:"🍁",cost:8000,rate:0,unique:true,season:"autumn",bonus:0.1,desc:"가을에만 지을 수 있는 계절 동상. 한 번 지으면 계속 남아요. 마을 전체 +10% (레벨마다 더)."},
   winter_statue:{name:"눈사람 투슬리스 동상",ico:"⛄",cost:8000,rate:0,unique:true,season:"winter",bonus:0.1,desc:"겨울에만 지을 수 있는 계절 동상. 한 번 지으면 계속 남아요. 마을 전체 +10% (레벨마다 더)."},
   xmas_tree:{name:"크리스마스 트리",ico:"🎄",cost:5000,rate:0,unique:true,reward:true,bonus:0.05,desc:"크리스마스 시즌 패스 10단계 보상. 마을 전체 +5% (레벨마다 더)."},
-  santa_statue:{name:"산타 투슬리스 동상",ico:"🎅",cost:20000,rate:0,unique:true,reward:true,bonus:0.2,desc:"크리스마스 시즌 패스 30단계 보상. 마을 전체 +20% (레벨마다 더)."}
+  santa_statue:{name:"산타 투슬리스 동상",ico:"🎅",cost:20000,rate:0,unique:true,reward:true,bonus:0.2,desc:"크리스마스 시즌 패스 100단계(마지막) 보상. 마을 전체 +20% (레벨마다 더)."}
 };
 const SEASON_KO={spring:"봄",summer:"여름",autumn:"가을",winter:"겨울"};
 function bkLock(k){ const B=BK_B[k];
@@ -2987,10 +2987,10 @@ function pvpResult(el){ const d=bt.done, nm=esc(bt.pvp.name);
 const HOME_SECTIONS=[
  {title:"이벤트",items:[
   {id:"season",ico:"🎄",col:"#2E8B57",name:"크리스마스 시즌 패스",sum:"놀면서 경험치 모아 단계별 선물 받기",go:()=>openSeason(),
-   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 100마다 한 단계씩 올라요. 모두 30단계예요.</p>
+   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 100마다 한 단계씩 올라요. 모두 <b>100단계</b>예요.</p>
    <ul><li>경험치: 매일 첫 접속 +50, 퀴즈 정답 +5, 미니게임 한 판 +20, 전투 승리 +15, 드래곤 뽑기 +3 등.</li>
    <li>단계마다 보석, 코인, 물고기, 펫 뽑기권을 받아요. 5단계마다 펫 뽑기권이에요.</li>
-   <li><b>10단계</b>에는 버크에 놓을 <b>크리스마스 트리</b>, <b>30단계</b>에는 <b>산타 투슬리스 동상</b>을 줘요.</li>
+   <li><b>10단계</b> 버크 <b>크리스마스 트리</b>, <b>25단계</b> 펫 뽑기권 3장, <b>50단계</b> 뽑기권 5장·보석 5k, <b>75단계</b> 뽑기권 5장·코인 1m, <b>100단계</b> <b>산타 투슬리스 동상</b>·뽑기권 10장·보석 20k!</li>
    <li>급하면 <b>보석 1,000개</b>로 한 단계를 건너뛸 수 있어요.</li>
    <li>받은 단계는 '받기'를 눌러야 들어와요.</li></ul>`},
   {id:"bank",ico:"🐷",col:"#D65CA8",name:"보석 저금통",sum:"보석을 맡기면 7일 뒤 이자가 붙어요",go:()=>openBank(),
@@ -3253,9 +3253,10 @@ function checkBirthday(){ const b=FB.bday; if(!b||b!==mmdd()) return; const y=da
 }
 
 /* ---------- 31. 시즌 패스: 크리스마스 시즌 ---------- */
-const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:30,xp:100,skip:1000};
+const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:100,xp:100,skip:1000};
 function spReward(t){ // 단계별 보상
-  if(t===10) return {bk:"xmas_tree"}; if(t===20) return {tickets:3}; if(t===30) return {bk:"santa_statue",tickets:2};
+  if(t===10) return {bk:"xmas_tree"}; if(t===25) return {tickets:3}; if(t===50) return {tickets:5,gems:5000}; if(t===75) return {tickets:5,coins:1000000};
+  if(t===100) return {bk:"santa_statue",tickets:10,gems:20000};
   if(t%5===0) return {tickets:1};
   const k=["gems","fish","coins"][t%3], base={gems:100,fish:3000,coins:30000}[k]; return {[k]:base*Math.ceil(t/3)}; }
 let sp={id:SEASON.id,xp:0,claimed:{},day:""}; const saveSp=makeSaver("settings/season",()=>sp);
