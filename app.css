@@ -1,6 +1,5 @@
 
 /* 기본 꾸밈 (아티팩트 밖에서도 똑같이 보이게) */
-:root{color-scheme:light}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font:14px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}

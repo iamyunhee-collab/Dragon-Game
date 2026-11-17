@@ -1856,6 +1856,8 @@ function skDrawBall(ctx,x,y,r,lv,ang){
   ctx.restore();
 }
 let skRaf=0, skLast=0;
+const skDarkMQ=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
+function skDark(){ const t=document.documentElement.dataset.theme; return t==="dark"||(t!=="light"&&!!(skDarkMQ&&skDarkMQ.matches)); }
 function skLoop(t){
   skRaf=requestAnimationFrame(skLoop);
   const cv=$("#skCanvas"); if(!cv||!G||view!=="click"||mgMode!=="suika"||document.hidden){ skLast=t; return; }
@@ -1868,7 +1870,12 @@ function skLoop(t){
     if(G.overT>10000){ G.over=true; sk.games=(sk.games||0)+1; const nb=G.score>(sk.best||0); if(nb) sk.best=G.score; saveSkAll(); skHud(); skOver(nb); skRenderItems(); }
   }
   const ctx=cv.getContext("2d"), dpr=cv.width/SK_W;
-  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,SK_W,SK_H);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // 배경을 캔버스에 직접 그려요: 브라우저 다크 모드가 상자 배경색을 바꿨다 말았다 하며 파랗게 번쩍이는 걸 막아요
+  { const dark=skDark(); if(!G.bg||G.bgDark!==dark){ const g=ctx.createLinearGradient(0,0,0,SK_H);
+      if(dark){ g.addColorStop(0,"#0B1E2C"); g.addColorStop(.5,"#0A1822"); g.addColorStop(1,"#14240F"); } else { g.addColorStop(0,"#5E9FC0"); g.addColorStop(.18,"#86BBD3"); g.addColorStop(1,"#C9DFC1"); }
+      G.bg=g; G.bgDark=dark; }
+    ctx.fillStyle=G.bg; ctx.fillRect(0,0,SK_W,SK_H); }
   // 선
   ctx.setLineDash([8,8]); ctx.lineWidth=2; ctx.strokeStyle=G.overT>0?`rgba(224,72,40,${.55+.15*Math.sin(t/450)})`:"rgba(255,255,255,.55)";
   ctx.beginPath(); ctx.moveTo(0,SK_LINE); ctx.lineTo(SK_W,SK_LINE); ctx.stroke(); ctx.setLineDash([]);
