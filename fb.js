@@ -5,7 +5,7 @@
 (function(){
   "use strict";
   const SHARED_COLL=new Set(["photos","live","petdefs","petphotos","blobs"]);
-  const SHARED_DOC=new Set(["settings/rarity","settings/extras","settings/battle"]);
+  const SHARED_DOC=new Set(["settings/rarity","settings/extras","settings/battle","settings/minidefaults"]);
   const BLANK="";
   let app,auth,fs,user=null,isOwner=false,readyResolve,readyReject;
   const ready=new Promise((a,b)=>{ readyResolve=a; readyReject=b; });
@@ -75,7 +75,7 @@
     async upload(blob,o){ o=o||{};
       let b64=await blobToB64(blob);
       if(b64.length>900000){ const e=new Error("too_large"); e.code="too_large"; throw e; }
-      const id=randId(), mine=!!o.mine||!isOwner;
+      const id=randId(), mine=!isOwner; // 관리자가 올린 사진은 공용(기본 사진)으로, 다른 사람은 자기 칸에
       await fs.doc((mine?"users/"+user.uid:"content/main")+"/blobs/"+id).set({t:blob.type||"image/jpeg",b:b64,at:Date.now()});
       urls.set(id,URL.createObjectURL(blob)); idbPut(id,blob); return {id};
     },
@@ -162,7 +162,11 @@
     }
   };
 
-  window.FB={ ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  async function publishBlobs(ids){ if(!isOwner) return; // 관리자 개인 칸에 있던 사진을 공용으로 복사
+    for(const id of [...new Set(ids)]){ if(!validId(id)) continue;
+      try{ const c=await fs.doc("content/main/blobs/"+id).get(); if(c.exists) continue;
+        const u=await fs.doc("users/"+user.uid+"/blobs/"+id).get(); if(u.exists) await fs.doc("content/main/blobs/"+id).set(u.data()); }catch(e){} } }
+  window.FB={ publishBlobs, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{

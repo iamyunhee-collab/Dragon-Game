@@ -23,7 +23,7 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .admrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.admrow b{flex:1;min-width:6em}
 .admgift{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.admgift input{width:7em}
 .badge{background:#C0392B;color:#fff;border-radius:999px;padding:0 8px;font-size:.8rem}
-
+.skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{
   --gem:#1FA7C9; --coin:#E3A41C; --t-common:#6E8592; --t-rare:#2F7FB8; --t-epic:#8A4FC4; --t-legend:#C98A12;

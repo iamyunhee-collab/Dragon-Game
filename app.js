@@ -1613,7 +1613,13 @@ const FISH_SVG='<svg class="fish" viewBox="0 0 32 20" aria-hidden="true"><path d
 let ck={tap:0,auto:0,crit:0,feast:0,fish:0,taps:0,earned:0,pick:""};
 try{ const v=JSON.parse(localStorage.getItem("httyd-clicker")||"null"); if(v) ck=Object.assign(ck,v); }catch(e){}
 const saveCk=makeSaver("settings/clicker",()=>ck);
-function saveCkAll(){ try{ localStorage.setItem("httyd-clicker",JSON.stringify(ck)); }catch(e){} saveCk(); }
+// 관리자가 미니게임 사진을 바꾸면 모두의 기본 사진도 같이 바뀌어요
+let mgPubT=null;
+function mgPublishSoon(){ if(!FB.isOwner||!cloud) return; clearTimeout(mgPubT); mgPubT=setTimeout(async()=>{
+  const want={suika:Array.from({length:SK_N},(_,i)=>(sk.imgs&&sk.imgs[i])||""),click:ckMine()};
+  if(JSON.stringify(want)===JSON.stringify({suika:mgDef.suika||[],click:mgDef.click||[]})) return;
+  try{ await FB.publishBlobs([...want.suika,...want.click].filter(Boolean)); await cloud.db.doc("settings/minidefaults").set(want); }catch(e){} },1500); }
+function saveCkAll(){ mgPublishSoon(); try{ localStorage.setItem("httyd-clicker",JSON.stringify(ck)); }catch(e){} saveCk(); }
 function initClickCloud(d){
   d.doc("settings/clicker").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/clicker"]&&!s.metadata.hasPendingWrites){
     ck=Object.assign({tap:0,auto:0,crit:0,feast:0,fish:0,taps:0,earned:0,pick:""},JSON.parse(JSON.stringify(s.data()||{})));
@@ -1643,8 +1649,11 @@ function ckOwned(){ return SPECIES.map(s=>s.id).filter(id=>hasPull(id)&&cardPhot
 function ckPickId(){ const own=ckOwned(); if(own.includes(ck.pick)) return ck.pick;
   const order=["legend","epic","rare","common"]; return own.slice().sort((a,b)=>order.indexOf(tierOf(a))-order.indexOf(tierOf(b)))[0]||""; }
 function ckMine(){ return (ck.my||[]).filter(Boolean); }
-function ckTarget(){ // 지금 누르는 대상: 내가 올린 사진 또는 뽑은 드래곤
-  const my=ckMine();
+let mgDef={suika:[],click:[]}; // 관리자가 정한 미니게임 기본 사진 (공용)
+function ckAll(){ return [...new Set([...ckMine(),...(mgDef.click||[]).filter(Boolean)])]; }
+function skImgId(i){ return (sk.imgs&&sk.imgs[i])||((mgDef.suika||[])[i])||""; }
+function ckTarget(){ // 지금 누르는 대상: 내가 올린 사진, 기본 사진 또는 뽑은 드래곤
+  const my=ckAll();
   if(ck.pick&&ck.pick.startsWith("my:")&&my.includes(ck.pick.slice(3))) return {key:ck.pick,url:blobUrl(ck.pick.slice(3)),name:"",cls:"legend",mine:true};
   const sid=ckPickId();
   if(sid){ const ph=cardPhoto(sid); return {key:sid,url:ph?urlOf(ph):"",name:koOf(sid),cls:(TIER_BY[tierOf(sid)]||TIER_BY.common).cls}; }
@@ -1746,7 +1755,8 @@ function renderClick(force){
         <button class="btn ghost small" data-ckmax="${u.k}" ${maxed||poor?"disabled":""}>잡은 만큼 올리기</button></div></div>`;}).join("")}</div>
     <p class="sec-title">누를 사진 고르기</p>
     <div class="ckpick">
-      ${my.map(id=>{const on=tg&&tg.key==="my:"+id; return `<div class="ckmine"><button class="ckp legend ${on?"on":""}" data-ckpick="my:${id}" aria-pressed="${on}"><img src="${blobUrl(id)}" alt=""><span>내 사진</span></button><button class="ckdel" data-ckdel="${id}" aria-label="이 사진 지우기">×</button></div>`;}).join("")}
+      ${my.map(id=>{const on=tg&&tg.key==="my:"+id; return `<div class="ckmine"><button class="ckp legend ${on?"on":""}" data-ckpick="my:${id}" aria-pressed="${on}"><img src="${blobUrl(id)}" alt=""><span>${FB.isOwner?"기본 사진":"내 사진"}</span></button><button class="ckdel" data-ckdel="${id}" aria-label="이 사진 지우기">×</button></div>`;}).join("")}
+      ${(mgDef.click||[]).filter(id=>id&&!my.includes(id)).map(id=>{const on=tg&&tg.key==="my:"+id; return `<button class="ckp legend ${on?"on":""}" data-ckpick="my:${id}" aria-pressed="${on}"><img src="${blobUrl(id)}" alt=""><span>기본 사진</span></button>`;}).join("")}
       <label class="ckp ckadd"><b class="plus" aria-hidden="true">+</b><span>사진 올리기</span><input type="file" accept="image/*" multiple id="ckFile" aria-label="클릭커 사진 올리기"></label>
       ${own.map(id=>{const on=tg&&tg.key===id; return `<button class="ckp ${on?"on":""} ${(TIER_BY[tierOf(id)]||TIER_BY.common).cls}" data-ckpick="${id}" aria-pressed="${on}"><img src="${urlOf(cardPhoto(id))}" alt=""><span>${esc(koOf(id))}</span></button>`;}).join("")}
     </div>`;
@@ -1774,17 +1784,21 @@ const SK_ITEMS=[
  {k:"shake",name:"흔들기",desc:"판을 흔들어 드래곤들을 띄워요",price:80}];
 function skItemN(k){ return (sk.items&&sk.items[k])||0; }
 const saveSk=makeSaver("settings/suika",()=>sk);
-function saveSkAll(){ try{ localStorage.setItem("httyd-suika",JSON.stringify(sk)); }catch(e){} saveSk(); }
+function saveSkAll(){ mgPublishSoon(); try{ localStorage.setItem("httyd-suika",JSON.stringify(sk)); }catch(e){} saveSk(); }
 try{ const l=JSON.parse(localStorage.getItem("httyd-suika")||"null"); if(l) sk=Object.assign(sk,l); }catch(e){}
 function skNorm(){ if(!sk.items||typeof sk.items!=="object") sk.items={}; sk.imgs=Array.from({length:SK_N},(_,i)=>(sk.imgs||[])[i]||""); }
 skNorm();
 function initSuikaCloud(d){
+  d.doc("settings/minidefaults").onSnapshot(s=>{ mgDef=Object.assign({suika:[],click:[]},s.exists?JSON.parse(JSON.stringify(s.data()||{})):{});
+    FB.preload([...(mgDef.suika||[]),...(mgDef.click||[])].filter(Boolean)); skLoadImgs();
+    if(view==="click"){ if(mgMode==="suika") skRenderSlots(); else if(mgMode==="click") renderClick(); } },()=>{});
+  if(FB.isOwner) setTimeout(mgPublishSoon,5000);
   d.doc("settings/suika").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/suika"]&&!s.metadata.hasPendingWrites){
     sk=Object.assign({imgs:[],best:0,games:0,items:{}},JSON.parse(JSON.stringify(s.data()||{}))); skNorm(); skLoadImgs();
     if(view==="click"&&mgMode==="suika") skRenderSlots(); } },()=>{});
 }
 const skImg={};
-function skLoadImgs(){ sk.imgs.forEach(id=>{ const u=id&&blobUrl(id); if(u&&!skImg[id]){ const im=new Image(); im.src=u; skImg[id]=im; } }); }
+function skLoadImgs(){ Array.from({length:SK_N},(_,i)=>skImgId(i)).forEach(id=>{ const u=id&&blobUrl(id); if(u&&!skImg[id]){ const im=new Image(); im.src=u; skImg[id]=im; } }); }
 skLoadImgs();
 
 let G=null; // 게임 상태
@@ -1816,7 +1830,7 @@ function skDrop(){
   G.cur=G.next; G.next=skRand(); G.cool=performance.now()+550; skHud();
 }
 function skDrawBall(ctx,x,y,r,lv,ang){
-  const id=sk.imgs[lv], im=id&&skImg[id];
+  const id=skImgId(lv), im=id&&skImg[id];
   ctx.save(); ctx.translate(x,y); ctx.rotate(ang||0);
   ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.closePath();
   if(im&&im.complete&&im.naturalWidth){ ctx.save(); ctx.clip(); const s=Math.max(2*r/im.naturalWidth,2*r/im.naturalHeight), w=im.naturalWidth*s, h=im.naturalHeight*s; ctx.drawImage(im,-w/2,-h/2,w,h); ctx.restore(); }
@@ -1933,10 +1947,10 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&mgFull) mgSetFull(
 document.addEventListener("fullscreenchange",()=>{ if(!document.fullscreenElement&&mgFull) mgSetFull(false); });
 function skRenderSlots(){
   const w=$("#skSlots"); if(!w) return;
-  w.innerHTML=sk.imgs.map((id,i)=>`<div class="skslot">
+  w.innerHTML=sk.imgs.map((own,i)=>{ const id=own||((mgDef.suika||[])[i]||""), def=!own&&!!id; return `<div class="skslot">
     <label class="skpic" style="--c:${SK_COL[i]};--s:${(.55+.45*i/(SK_N-1)).toFixed(2)}">${id?`<img src="${blobUrl(id)}" alt="">`:`<b>+</b>`}
       <input type="file" accept="image/*" data-skslot="${i}" aria-label="${i+1}단계 사진 고르기"></label>
-    <span class="sklv">${i+1}단계</span>${id?`<button class="ckdel skdel" data-skdel="${i}" aria-label="${i+1}단계 사진 빼기">×</button>`:""}</div>`).join("");
+    <span class="sklv">${i+1}단계</span>${own?`<button class="ckdel skdel" data-skdel="${i}" aria-label="${i+1}단계 사진 빼기">×</button>`:""}${def?`<span class="skdef">기본</span>`:""}</div>`;}).join("");
   w.querySelectorAll("[data-skslot]").forEach(inp=>inp.onchange=()=>{ const fs=[...inp.files]; inp.value=""; if(fs.length) skUpload(fs.slice(0,1),+inp.dataset.skslot); });
   w.querySelectorAll("[data-skdel]").forEach(b=>b.onclick=()=>{ if(!b.dataset.armed){ b.dataset.armed="1"; b.textContent="빼기?"; b.classList.add("armed"); setTimeout(()=>{ if(b.isConnected){ delete b.dataset.armed; b.textContent="×"; b.classList.remove("armed"); } },3000); return; }
     const i=+b.dataset.skdel, old=sk.imgs[i]; sk.imgs[i]=""; saveSkAll(); skRenderSlots(); if(old&&cloud&&!sk.imgs.includes(old)) cloud.assets.delete(old).catch(()=>{}); });
@@ -2070,7 +2084,7 @@ const VIKING_SVG=`<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 26 Q4 
 <path d="M14 30 Q14 12 32 12 Q50 12 50 30Z" fill="#9AA4AA" stroke="#5A6268" stroke-width="2"/><rect x="12" y="28" width="40" height="6" rx="2" fill="#7A858B"/>
 <circle cx="32" cy="40" r="13" fill="#F1C9A5"/><circle cx="27" cy="38" r="2" fill="#222"/><circle cx="37" cy="38" r="2" fill="#222"/>
 <path d="M19 44 Q32 66 45 44 Q38 50 32 49 Q26 50 19 44Z" fill="#C8662B"/></svg>`;
-function hdPics(){ const own=ckOwned().map(id=>({url:urlOf(cardPhoto(id)),name:koOf(id)})); const my=ckMine().map(id=>({url:blobUrl(id),name:""})); return [...own,...my]; }
+function hdPics(){ const own=ckOwned().map(id=>({url:urlOf(cardPhoto(id)),name:koOf(id)})); const my=ckAll().map(id=>({url:blobUrl(id),name:""})); return [...own,...my]; }
 function hdStart(){
   clearTimeout(hdT); H={state:"play",start:performance.now(),score:0,hits:0,miss:0,holes:Array(HD_N).fill(null),combo:0};
   $("#hdOver").hidden=true; renderHideBoard(); hdSpawn(); hdTick();
@@ -2140,8 +2154,8 @@ function memPool(){ // 뽑은 드래곤 사진 → 클릭커 내 사진 → 수�
   const seen=new Set(), out=[];
   const add=(url,name)=>{ if(url&&!seen.has(url)){ seen.add(url); out.push({url,name}); } };
   ckOwned().forEach(id=>add(urlOf(cardPhoto(id)),koOf(id)));
-  ckMine().forEach(id=>add(blobUrl(id),""));
-  (sk.imgs||[]).forEach(id=>id&&add(blobUrl(id),""));
+  ckAll().forEach(id=>add(blobUrl(id),""));
+  Array.from({length:SK_N},(_,i)=>skImgId(i)).forEach(id=>id&&add(blobUrl(id),""));
   return out;
 }
 function memShuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
