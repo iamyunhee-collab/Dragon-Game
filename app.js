@@ -147,6 +147,8 @@ function rerender(){
   else if(view==="cup"){ if(!cup.round) renderCup(); }
   else if(view==="fortune"){ renderFortune(); }
   else if(view==="battle"){ softRenderBattle(); }
+  else if(view==="home"){ renderHome(); }
+  else if(view==="click"){ }
   else if(!document.activeElement||document.activeElement.id!=="q") renderManage();
 }
 async function refresh(){
@@ -218,14 +220,14 @@ function updateTop(){
   const label = view==="cup"&&cup.round&&!cup.champ ? `${cup.mode==="live"?"실사화 ":""}${cup.size}강 · ` : "";
   $("#topStat").innerHTML = `<span class="gembar">${label}<svg class="gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z" fill="var(--gem)"/><path d="M2 9h20M8 3l4 18 4-18M6 3l2 6m10-6-2 6" stroke="rgba(255,255,255,.55)" stroke-width="1.2" fill="none"/></svg><span>${fmt(typeof gems==="number"?gems:0)}</span>${typeof coins==="number"&&coins>0?`<span style="margin-left:8px;display:inline-flex;align-items:center;gap:4px"><svg class="gem" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--coin)"/><circle cx="12" cy="12" r="7" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.5"/><path d="M12 7.5v9M9.5 9.5h4a1.6 1.6 0 0 1 0 3.2h-3a1.6 1.6 0 0 0 0 3.2h4" stroke="rgba(120,70,0,.75)" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>${fmt(coins)}</span>`:""}</span>`;
 }
-let view="quiz";
+let view="home";
 function show(v){ if(typeof mgFull!=="undefined"&&mgFull&&v!=="click") mgSetFull(false);
-  view=v; $("#quizView").hidden=v!=="quiz"; $("#manageView").hidden=v!=="manage"; $("#cupView").hidden=v!=="cup"; $("#fortuneView").hidden=v!=="fortune"; $("#battleView").hidden=v!=="battle"; $("#clickView").hidden=v!=="click"; $("#tabClick").setAttribute("aria-selected",v==="click"); $("#tabBattle").setAttribute("aria-selected",v==="battle");
+  view=v; $("#homeView").hidden=v!=="home"; $("#tabHome").setAttribute("aria-selected",v==="home"); $("#quizView").hidden=v!=="quiz"; $("#manageView").hidden=v!=="manage"; $("#cupView").hidden=v!=="cup"; $("#fortuneView").hidden=v!=="fortune"; $("#battleView").hidden=v!=="battle"; $("#clickView").hidden=v!=="click"; $("#tabClick").setAttribute("aria-selected",v==="click"); $("#tabBattle").setAttribute("aria-selected",v==="battle");
   $("#tabQuiz").setAttribute("aria-selected",v==="quiz"); $("#tabManage").setAttribute("aria-selected",v==="manage"); $("#tabCup").setAttribute("aria-selected",v==="cup"); $("#tabFortune").setAttribute("aria-selected",v==="fortune");
-  if(v==="quiz") renderQuiz(); else if(v==="cup") renderCup(); else if(v==="fortune") renderFortune(); else if(v==="battle") renderBattle(); else if(v==="click") renderClick(); else renderManage();
+  if(v==="home") renderHome(); else if(v==="quiz") renderQuiz(); else if(v==="cup") renderCup(); else if(v==="fortune") renderFortune(); else if(v==="battle") renderBattle(); else if(v==="click") renderClick(); else renderManage();
   updateTop(); window.scrollTo(0,0); if(typeof updateAutoPill==="function") updateAutoPill();
 }
-$("#tabQuiz").onclick=()=>show("quiz");
+$("#tabQuiz").onclick=()=>show("quiz"); $("#tabHome").onclick=()=>show("home");
 $("#tabManage").onclick=()=>show("manage");
 $("#tabCup").onclick=()=>show("cup");
 $("#tabFortune").onclick=()=>show("fortune");
@@ -2808,7 +2810,7 @@ document.addEventListener("change",async e=>{
 // ---------- 시작 ----------
 (async()=>{
   db=await openDB();
-  await refresh(); show("quiz");
+  await refresh(); show("home");
   await initCloud();
   if(!cloud) $("#warn").hidden=false;
   // 자동 뽑기를 켜둔 채 앱을 닫았다면 다시 열 때 이어서
@@ -2948,6 +2950,154 @@ function pvpResult(el){ const d=bt.done, nm=esc(bt.pvp.name);
   $("#pvpAgain").onclick=()=>{ bt=null; startPvp(uid); };
   const bb=$("#pvpBrag"); if(bb) bb.onclick=()=>shareCard({game:"친구 대결",big:`${name} 팀 격파!`,photo:cardPhoto(bt.me[0].sid)?urlOf(cardPhoto(bt.me[0].sid)):null});
   $("#pvpOut").onclick=()=>{ bt=null; bv.sub="pvp"; arenaList=null; renderBattle(); };
+}
+
+// ---------- 홈: 접속하면 처음 보이는 화면. 큰 아이콘으로 고르고, 기능마다 자세한 설명을 볼 수 있어요 ----------
+const HOME_SECTIONS=[
+ {title:"드래곤 도감",items:[
+  {id:"quiz",ico:"🧩",col:"#3FA7D6",name:"드래곤 퀴즈",sum:"사진을 보고 드래곤 이름 맞히기",go:()=>show("quiz"),
+   det:`<p>드래곤 사진이 한 장씩 나오면 그 드래곤의 이름을 써서 맞혀요.</p>
+   <ul><li>띄어쓰기는 신경 쓰지 않아도 돼요. 비슷하게 쓰면 정답으로 인정해요. (예: 나이트퓨리, 나이트 퓨리)</li>
+   <li>한 문제 맞힐 때마다 <b>보석 1개</b>를 받아요.</li>
+   <li>중간에 멈출 수 있고, 끝나면 <b>틀린 문제만 다시</b> 풀 수 있어요.</li>
+   <li>끝난 화면에서 <b>자랑하기</b>로 점수를 카톡에 보낼 수 있어요.</li></ul>`},
+  {id:"cup",ico:"🏆",col:"#F2C14E",name:"이상형 월드컵",sum:"두 마리 중 더 좋은 드래곤 고르기",go:()=>show("cup"),
+   det:`<p>드래곤 두 마리가 나오면 더 좋은 쪽을 눌러요. 계속 고르다 보면 마지막 한 마리가 <b>우승</b>해요.</p>
+   <ul><li>16강, 8강처럼 대진 크기를 고를 수 있어요.</li>
+   <li><b>실사화 월드컵</b>은 실사 영화 드래곤 8강이에요. 매번 한 마리가 무작위로 빠져요.</li>
+   <li>끝까지 하면 <b>보석 1개</b>를 받고, 우승 기록이 명예의 전당에 남아요.</li>
+   <li>우승 화면에서 <b>자랑하기</b>로 내 최애 드래곤을 카톡에 보낼 수 있어요.</li></ul>`},
+ ]},
+ {title:"뽑기와 펫",items:[
+  {id:"draw",ico:"🥚",col:"#E85D75",name:"드래곤 뽑기",sum:"보석으로 알을 깨서 드래곤 모으기",go:()=>{ fz.sub="draw"; show("fortune"); },
+   det:`<p>보석 <b>8개</b>로 알을 하나 깨요. 알에서 나온 드래곤은 <b>도감</b>에 모여요.</p>
+   <ul><li>등급은 일반 · 희귀 · 영웅 · 전설이 있어요. 높은 등급일수록 알이 화려하게 빛나요.</li>
+   <li>처음 보는 드래곤이면 보너스 보석을 줘요. (희귀 2개, 영웅 4개, 전설 8개)</li>
+   <li><b>자동 뽑기</b>를 켜면 보석이 있는 동안 계속 뽑아요.</li>
+   <li>같은 드래곤이 또 나오면 '카드와 팀'에서 카드 레벨을 올리는 데 써요.</li>
+   <li>'도감' 칸에서 모은 드래곤과 아직 못 모은 드래곤을 볼 수 있어요.</li></ul>`},
+  {id:"pet",ico:"🐣",col:"#A05CD6",name:"아기 드래곤 펫",sum:"특별한 능력을 가진 펫 뽑고 장착하기",go:()=>{ fz.sub="pet"; show("fortune"); },
+   det:`<p>보석 <b>1,000개</b> 또는 <b>펫 뽑기권</b>으로 아기 드래곤 펫을 뽑아요.</p>
+   <ul><li>펫마다 능력이 있어요. 보석을 더 많이 받게 해 주거나, 전투에서 회복·부활·봉인 같은 효과를 내요.</li>
+   <li>전투 효과는 <b>장착한 펫</b>만 켜져요. 기본 3칸이고, 칸은 보석으로 늘릴 수 있어요.</li>
+   <li>장착은 '전투 → 카드와 팀'에서 해요.</li>
+   <li>펫 뽑기권은 도감을 완성하거나 관리자 선물로 받을 수 있어요.</li></ul>`},
+ ]},
+ {title:"전투",items:[
+  {id:"adv",ico:"⚔️",col:"#E4572E",name:"모험",sum:"스테이지를 깨며 코인 모으기",go:()=>{ bv.sub="adv"; show("battle"); },
+   det:`<p>내 드래곤 3마리 팀으로 적과 <b>번갈아 공격하는 턴제 전투</b>를 해요.</p>
+   <ul><li>공격하면 필살기 게이지가 차고, 가득 차면 <b>필살기</b>를 쓸 수 있어요.</li>
+   <li>10스테이지마다 <b>보스</b>가 나와요. 레드 데스 같은 거대 드래곤이에요.</li>
+   <li>이기면 <b>코인</b>을 받아요. 처음 깬 스테이지는 2배예요.</li>
+   <li>난이도(쉬움~지옥)를 고를 수 있어요. 어려울수록 적이 세고 보상도 커요.</li>
+   <li><b>자동 전투</b>를 켜면 알아서 싸우고, 다음 스테이지로도 계속 넘어가요.</li></ul>`},
+  {id:"pvp",ico:"🤝",col:"#2EC4B6",name:"친구 대결",sum:"친구가 등록한 팀과 겨루기",go:()=>{ bv.sub="pvp"; show("battle"); },
+   det:`<p>친구가 등록해 둔 팀과 내 팀이 싸워요. <b>친구가 접속해 있지 않아도</b> 돼요.</p>
+   <ul><li>이 탭에 들어오면 내 팀도 자동으로 등록돼서, 친구들이 내 팀과 대결할 수 있어요.</li>
+   <li>내 펫 효과도 그대로 써요. 자동 전투도 돼요.</li>
+   <li>이기면 상대 전투력에 따라 <b>코인</b>을 받고, 승패 기록이 쌓여요.</li>
+   <li>이긴 화면에서 <b>자랑하기</b>로 친구에게 알려 줄 수 있어요.</li></ul>`},
+  {id:"cards",ico:"🃏",col:"#5965D9",name:"카드와 팀",sum:"카드 레벨 올리고 팀·펫 정하기",go:()=>{ bv.sub="cards"; show("battle"); },
+   det:`<p>뽑은 드래곤이 <b>전투 카드</b>가 돼요. 여기서 카드를 키우고 팀을 짜요.</p>
+   <ul><li>같은 드래곤을 여러 번 뽑으면 레벨이 올라가요. 코인을 써서 더 올릴 수도 있어요.</li>
+   <li>레벨이 오르면 체력과 공격력이 세져요.</li>
+   <li>전투에 나갈 드래곤 <b>3마리</b>와 응원할 펫을 골라요.</li></ul>`},
+ ]},
+ {title:"미니게임",items:[
+  {id:"berk",ico:"🏝️",col:"#4CB944",name:"버크 만들기",sum:"건물을 지어 나만의 마을 키우기",go:()=>goMini("berk"),
+   det:`<p>버크 섬 지도의 땅을 눌러 <b>물고기</b>로 건물을 지어요. 건물은 <b>1분마다 물고기를 모아</b> 줘요.</p>
+   <ul><li>앱을 꺼 둬도 최대 8시간 동안 쌓여요. <b>걷기</b>를 누르면 물고기가 들어와요.</li>
+   <li>어부 오두막은 바닷가에 지으면 2배, 양 목장은 집 옆에 있으면 더 많이 모아요. <b>어디에 짓느냐</b>가 중요해요.</li>
+   <li>드래곤 우리에 뽑은 드래곤을 넣으면 등급만큼 더 모아요.</li>
+   <li>건물은 Lv.5까지 올릴 수 있어요. 부수면 쓴 물고기의 절반을 돌려받아요.</li>
+   <li>가끔 날아오는 <b>야생 드래곤</b>을 누르면 선물을 줘요. 밤이 되면 마을에 불이 켜져요.</li></ul>`},
+  {id:"click",ico:"🐟",col:"#E9A23B",name:"클릭커 낚시",sum:"드래곤을 마구 눌러 물고기 잡기",go:()=>goMini("click"),
+   det:`<p>버크 부둣가에서 드래곤을 누를 때마다 <b>물고기</b>를 잡아요. 물고기는 모든 미니게임에서 쓰는 돈이에요.</p>
+   <ul><li>5초 안에 30번 누르면 <b>피버</b>! 하늘이 붉게 물들고 잡는 양이 3배가 돼요.</li>
+   <li>물고기로 그물(한 번에 더 많이), 바이킹 어부(자동으로 잡기), 황금 물고기(가끔 10배), 버크 잔치(피버 시간 늘리기)를 올려요.</li>
+   <li>누를 드래곤이나 사진을 바꿀 수 있어요. 고른 얼굴은 다른 미니게임에도 나와요.</li></ul>`},
+  {id:"suika",ico:"🍉",col:"#E85D75",name:"수박게임",sum:"같은 드래곤을 합쳐 더 크게",go:()=>goMini("suika"),
+   det:`<p>드래곤 공을 떨어뜨려서 <b>같은 단계 둘이 닿으면 합쳐져</b> 다음 단계가 돼요. 15단계까지 있어요.</p>
+   <ul><li>화면을 누른 채 좌우로 움직이고, 손을 떼면 떨어져요.</li>
+   <li>점선 위에 공이 <b>10초 넘게</b> 쌓여 있으면 끝나요.</li>
+   <li>물고기로 아이템을 살 수 있어요: <b>강제 합체</b>(같은 드래곤끼리 끌어서 합치기), <b>삭제</b>, <b>흔들기</b>.</li>
+   <li>단계별 사진은 기본 사진이 나오고, 칸을 눌러 내 사진으로 바꿀 수 있어요.</li>
+   <li>점수는 <b>랭킹</b>에 올라가요.</li></ul>`},
+  {id:"fly",ico:"🪽",col:"#3FA7D6",name:"비행",sum:"바위 기둥 사이로 날아가기",go:()=>goMini("fly"),
+   det:`<p>화면을 누를 때마다 드래곤이 날아올라요. <b>바위 기둥 사이</b>를 통과해요.</p>
+   <ul><li>기둥이나 바다, 하늘 끝에 닿으면 끝나요.</li>
+   <li>기둥 사이에 떠 있는 물고기를 주울 수 있어요.</li>
+   <li>많이 지날수록 빨라지고 틈이 좁아져요.</li>
+   <li>지난 기둥 수가 <b>랭킹</b>에 올라가요.</li></ul>`},
+  {id:"hide",ico:"🏠",col:"#8C3B22",name:"숨바꼭질",sum:"집에서 튀어나오는 드래곤 잡기",go:()=>goMini("hide"),
+   det:`<p>30초 동안 버크 집 9채에서 드래곤이 튀어나오면 재빨리 눌러요.</p>
+   <ul><li>드래곤은 1점, <b>금빛 드래곤은 5점</b>이에요. 5번 넘게 연속으로 맞히면 1점씩 더 줘요.</li>
+   <li><b>바이킹</b>을 누르면 1점 깎여요.</li>
+   <li>시간이 갈수록 빨라져요.</li></ul>`},
+  {id:"mem",ico:"🎴",col:"#5965D9",name:"짝맞추기",sum:"같은 드래곤 카드 두 장 찾기",go:()=>goMini("mem"),
+   det:`<p>뒤집힌 카드를 두 장씩 뒤집어서 <b>같은 드래곤</b>을 찾아요.</p>
+   <ul><li>쉬움(6쌍), 보통(8쌍), 어려움(10쌍)이 있어요.</li>
+   <li>찾으면 드래곤 이름이 나와서 이름 외우기 연습도 돼요.</li>
+   <li><b>적게 뒤집을수록</b> 잘한 거예요. 난이도별로 랭킹이 따로 있어요.</li></ul>`},
+  {id:"sling",ico:"🔥",col:"#E4572E",name:"불뿜기",sum:"불덩이를 날려 바이킹 맞히기",go:()=>goMini("sling"),
+   det:`<p>화면을 누른 채 <b>뒤로 끌었다가 놓으면</b> 불덩이가 날아가요. 끄는 동안 날아갈 길이 점선으로 보여요.</p>
+   <ul><li>나무 탑 사이의 바이킹을 맞히거나 무너뜨리면 100점이에요.</li>
+   <li>바이킹을 모두 맞히면 다음 단계예요. 남은 불덩이 하나마다 50점을 더 줘요.</li>
+   <li>단계가 오를수록 탑이 높아지고 늘어나요.</li></ul>`},
+  {id:"run",ico:"🏃",col:"#9BC53D",name:"달리기",sum:"점프해서 바위 넘기",go:()=>goMini("run"),
+   det:`<p>드래곤이 계속 달려요. 화면을 누르면 <b>점프</b>하고, 공중에서 한 번 더 누르면 한 번 더 뛰어요.</p>
+   <ul><li>바위에 부딪히면 끝나요.</li>
+   <li>하늘에 뜬 물고기를 점프해서 주워요.</li>
+   <li>달린 거리(m)가 <b>랭킹</b>에 올라가요.</li></ul>`},
+  {id:"stack",ico:"🧱",col:"#B5651D",name:"탑쌓기",sum:"블록을 딱 맞춰 높이 쌓기",go:()=>goMini("stack"),
+   det:`<p>좌우로 움직이는 나무 블록이 아래 블록 위에 왔을 때 눌러요.</p>
+   <ul><li>삐져나온 부분은 잘려 나가서 블록이 점점 좁아져요.</li>
+   <li>딱 맞추면 '완벽!'이 떠요. <b>3번 연속</b>이면 블록이 다시 넓어져요.</li>
+   <li>쌓은 층수가 <b>랭킹</b>에 올라가요.</li></ul>`},
+  {id:"simon",ico:"🎵",col:"#F2C14E",name:"순서기억",sum:"반짝인 순서대로 누르기",go:()=>goMini("simon"),
+   det:`<p>네 마리 드래곤이 소리와 함께 차례로 반짝여요. <b>똑같은 순서</b>로 눌러요.</p>
+   <ul><li>맞힐 때마다 순서가 하나씩 길어지고 조금씩 빨라져요.</li>
+   <li>기억한 길이가 <b>랭킹</b>에 올라가요.</li>
+   <li>무음 모드에서는 소리가 안 날 수 있어요.</li></ul>`},
+  {id:"egg",ico:"🧺",col:"#6FA071",name:"알 받기",sum:"바구니로 드래곤 알 받기",go:()=>goMini("egg"),
+   det:`<p>화면을 누른 채 좌우로 움직여 바구니로 떨어지는 <b>드래곤 알</b>을 받아요.</p>
+   <ul><li>금빛 알은 5점이에요.</li>
+   <li>목숨은 ♥ 3개예요. <b>폭탄</b>을 받거나 알을 5개 놓칠 때마다 하나씩 줄어요.</li>
+   <li>갈수록 빨라지고 폭탄도 많아져요.</li></ul>`},
+  {id:"dodge",ico:"☄️",col:"#7A2E1E",name:"불꽃피하기",sum:"날아오는 불덩이 피하기",go:()=>goMini("dodge"),
+   det:`<p>화면 아무 데나 누른 채 움직이면 드래곤이 따라와요. 사방에서 날아오는 <b>불덩이를 피해요</b>.</p>
+   <ul><li>불덩이에 한 번이라도 닿으면 끝나요.</li>
+   <li>가끔 나타나는 물고기를 주울 수 있어요.</li>
+   <li>버틴 시간(초)이 <b>랭킹</b>에 올라가요.</li></ul>`},
+ ]},
+ {title:"모두 함께",items:[
+  {id:"rank",ico:"🥇",col:"#1E3440",name:"랭킹",sum:"게임별 순위 보기",go:()=>openRank("suika"),
+   det:`<p>미니게임마다 멤버들의 <b>최고 기록 순위</b>를 봐요.</p>
+   <ul><li>같은 기록이면 <b>먼저 세운 사람</b>이 위예요.</li>
+   <li>게임이 끝나면 내 기록이 자동으로 올라가고, 결과 창에 몇 등인지 나와요.</li>
+   <li>결과 창의 <b>자랑하기</b>를 누르면 기록 카드 그림이 만들어져서 카카오톡으로 보낼 수 있어요.</li></ul>`},
+  {id:"manage",ico:"🛠️",col:"#555",name:"관리자",sum:"멤버 승인, 선물, 사진 관리",owner:true,go:()=>show("manage"),
+   det:`<p>관리자만 보여요.</p>
+   <ul><li>새로 온 사람의 <b>승인 요청</b>을 승인하거나 거절하고, 멤버를 뺄 수 있어요.</li>
+   <li>멤버에게 보석, 코인, 펫 뽑기권을 <b>선물</b>해요.</li>
+   <li>랭킹에 보일 내 이름을 정해요.</li>
+   <li>아래에서 드래곤 사진을 올리고 관리해요.</li></ul>`},
+ ]}
+];
+function goMini(k){ mgMode=k; try{ localStorage.setItem("httyd-mg",k); }catch(e){} show("click"); renderClick(true); }
+function renderHome(){
+  const el=$("#homeView"); if(!el) return;
+  const fish=typeof ck!=="undefined"?ck.fish||0:0;
+  el.innerHTML=`<div class="home">
+    <div class="hhello"><h1>${FB.name&&FB.name!=="관리자"?esc(FB.name)+"님, ":""}오늘은 뭐 할까?</h1>
+      <div class="hstats"><span><svg class="gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z" fill="var(--gem)"/></svg>보석 <b>${fmt(gems)}</b></span><span>${COIN_SVG}코인 <b>${fmt(coins)}</b></span><span>${FISH_SVG}물고기 <b>${fmt(fish)}</b></span></div></div>
+    ${HOME_SECTIONS.map(sec=>{ const items=sec.items.filter(it=>!it.owner||FB.isOwner); if(!items.length) return "";
+      return `<section class="hsec"><h2>${sec.title}</h2><div class="hgrid">${items.map(it=>`<div class="hcard" style="--hc:${it.col}">
+        <button class="hgo" data-hgo="${it.id}"><span class="hico" aria-hidden="true">${it.ico}</span><b>${it.name}</b><span class="hsum">${it.sum}</span></button>
+        <details class="hdet"><summary>자세히 보기</summary>${it.det}</details></div>`).join("")}</div></section>`; }).join("")}
+    <p class="note" style="text-align:center">아래 탭이나 각 화면에서 언제든 <b>홈</b>으로 돌아올 수 있어요.</p></div>`;
+  const all=HOME_SECTIONS.flatMap(s=>s.items);
+  el.querySelectorAll("[data-hgo]").forEach(b=>b.onclick=()=>{ const it=all.find(x=>x.id===b.dataset.hgo); if(it) it.go(); });
 }
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }

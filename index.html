@@ -18,7 +18,8 @@
 
 <main class="wrap">
   <div id="warn" class="warn" hidden>서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 열어 주세요.</div>
-  <section id="quizView"></section>
+  <section id="homeView"></section>
+  <section id="quizView" hidden></section>
   <section id="cupView" hidden></section>
   <section id="fortuneView" hidden></section>
   <section id="battleView" hidden></section>
@@ -27,7 +28,8 @@
 </main>
 
 <nav class="tabs"><div class="in" role="tablist">
-  <button id="tabQuiz" role="tab" aria-selected="true">퀴즈</button>
+  <button id="tabHome" role="tab" aria-selected="true">홈</button>
+  <button id="tabQuiz" role="tab" aria-selected="false">퀴즈</button>
   <button id="tabCup" role="tab" aria-selected="false">월드컵</button>
   <button id="tabFortune" role="tab" aria-selected="false">뽑기</button>
   <button id="tabBattle" role="tab" aria-selected="false">전투</button>

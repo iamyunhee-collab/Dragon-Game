@@ -48,6 +48,28 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .pvpu{display:flex;flex-direction:column;align-items:center;width:64px;font-size:.65rem;text-align:center}
 .pvpu img{width:56px;height:56px;border-radius:12px;object-fit:cover;border:2px solid var(--tc,#ccc)}
 .pvpu i{font-style:normal;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:64px}
+.home{display:flex;flex-direction:column;gap:18px}
+.hhello h1{margin:0 0 6px;font-family:var(--display,inherit);font-size:1.6rem;text-wrap:balance}
+.hstats{display:flex;flex-wrap:wrap;gap:6px}
+.hstats span{display:flex;align-items:center;gap:4px;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:999px;padding:4px 10px;font-size:.85rem}
+.hstats .gem,.hstats .fish{width:1.1em;height:1.1em}
+.hsec h2{margin:0 0 8px;font-size:1.1rem;letter-spacing:.02em}
+.hgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.hgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.hcard{display:flex;flex-direction:column;background:var(--surface,#fff);border:2px solid color-mix(in srgb,var(--hc) 35%,var(--line,#ddd));border-radius:18px;overflow:hidden;min-width:0}
+.hgo{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px 12px;border:0;background:linear-gradient(180deg,color-mix(in srgb,var(--hc) 16%,transparent),transparent 70%);color:inherit;cursor:pointer;text-align:center;touch-action:manipulation}
+.hgo:active{transform:scale(.97)}
+.hico{display:flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:22px;font-size:2.6rem;line-height:1;background:color-mix(in srgb,var(--hc) 28%,var(--surface,#fff));box-shadow:0 6px 14px -8px var(--hc)}
+.hgo b{font-size:1.08rem;font-family:var(--display,inherit)}
+.hsum{font-size:.78rem;opacity:.75;line-height:1.35}
+.hdet{border-top:1px dashed var(--line,#ddd);padding:0 12px;font-size:.84rem;line-height:1.55}
+.hdet summary{cursor:pointer;padding:8px 0;font-weight:600;color:var(--hc);list-style:none;text-align:center}
+.hdet summary::-webkit-details-marker{display:none}
+.hdet[open] summary{text-align:left}
+.hdet p{margin:0 0 6px}.hdet ul{margin:0 0 10px;padding-left:1.1em;display:flex;flex-direction:column;gap:3px}
+.hgrid{align-items:start}
+.hcard:has(details[open]){grid-column:1/-1}
+.hsum,.hdet,.hgo b{word-break:keep-all;overflow-wrap:anywhere}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{
@@ -72,7 +94,7 @@ header.top .in{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area
 header.top h1{font-family:var(--display);font-weight:400;font-size:1.35rem;margin:0;letter-spacing:.01em}
 .stat{font-family:var(--display);font-size:1rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-nav.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
+nav.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr)}
 nav.tabs button{font-family:var(--display);font-size:.85rem;white-space:nowrap;background:none;border:0;color:var(--muted);padding:14px 0;cursor:pointer}
 nav.tabs button[aria-selected="true"]{color:var(--ember);box-shadow:inset 0 3px 0 var(--ember)}
 button,input,select{font:inherit;color:inherit}
