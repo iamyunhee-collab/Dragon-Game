@@ -1863,7 +1863,7 @@ function skLoop(t){
   const ctx=cv.getContext("2d"), dpr=cv.width/SK_W;
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,SK_W,SK_H);
   // 선
-  ctx.setLineDash([8,8]); ctx.lineWidth=2; ctx.strokeStyle=G.overT>0?`rgba(224,72,40,${.5+.5*Math.sin(t/90)})`:"rgba(255,255,255,.55)";
+  ctx.setLineDash([8,8]); ctx.lineWidth=2; ctx.strokeStyle=G.overT>0?`rgba(224,72,40,${.55+.15*Math.sin(t/450)})`:"rgba(255,255,255,.55)";
   ctx.beginPath(); ctx.moveTo(0,SK_LINE); ctx.lineTo(SK_W,SK_LINE); ctx.stroke(); ctx.setLineDash([]);
   // 떨어뜨릴 공 + 안내선
   if(!G.over&&!G.tool){ const r=SK_R[G.cur], x=Math.max(r+2,Math.min(SK_W-r-2,G.x)), ready=t>=G.cool;
@@ -1876,7 +1876,7 @@ function skLoop(t){
     ctx.fillStyle="#fff"; ctx.font="bold 20px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(G.tool==="del"?"없앨 드래곤을 누르세요":"드래곤을 끌어서 같은 드래곤에 놓으세요",SK_W/2,12); }
   G.pops=G.pops.filter(p=>(p.t+=dt)<380);
-  for(const p of G.pops){ const k=p.t/380; ctx.strokeStyle=p.c; ctx.globalAlpha=1-k; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1+k*.6),0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; }
+  for(const p of G.pops){ const k=p.t/380; ctx.strokeStyle=p.c; ctx.globalAlpha=.45*(1-k); ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1+k*.6),0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; }
   const sc=$("#skScore"); if(sc&&sc.textContent!==fmt(G.score)) sc.textContent=fmt(G.score);
 }
 function skBodyAt(x,y){ const bs=Matter.Composite.allBodies(G.engine.world).filter(b=>b.lv!=null);
