@@ -1745,6 +1745,7 @@ function renderClick(force){
   if(RH&&RH.stop&&RH.state==="play"){ RH.stop(); RH=null; }
   if(mgMode==="magic"){ if(force||!$("#magicCanvas")) renderMagic(); return; }
   if(mgMode==="tetris"){ if(force||!$("#tetrisCanvas")) renderTetris(); return; }
+  if(mgMode==="race"){ if(force||!$("#raceCanvas")) renderRace(); return; }
   if(mgMode==="berk"){ if(force||!$("#bkMap")) renderBerk(); else bkRefresh(); return; }
   const el=$("#clickView"); if(!el) return;
   const own=ckOwned(), my=ckMine(), tg=ckTarget();
@@ -1990,8 +1991,8 @@ async function skUpload(files,slot){
   }
   if(n) toast(`사진 ${n}장 넣었어요`);
 }
-function mgTabsHtml(){ return `<div class="mgbar"><div class="mgtabs" role="tablist"><button role="tab" data-mg="click" aria-selected="${mgMode==="click"}">클릭커</button><button role="tab" data-mg="suika" aria-selected="${mgMode==="suika"}">수박게임</button><button role="tab" data-mg="fly" aria-selected="${mgMode==="fly"}">비행</button><button role="tab" data-mg="hide" aria-selected="${mgMode==="hide"}">숨바꼭질</button><button role="tab" data-mg="mem" aria-selected="${mgMode==="mem"}">짝맞추기</button><button role="tab" data-mg="sling" aria-selected="${mgMode==="sling"}">불뿜기</button><button role="tab" data-mg="run" aria-selected="${mgMode==="run"}">달리기</button><button role="tab" data-mg="stack" aria-selected="${mgMode==="stack"}">탑쌓기</button><button role="tab" data-mg="simon" aria-selected="${mgMode==="simon"}">순서기억</button><button role="tab" data-mg="egg" aria-selected="${mgMode==="egg"}">알 받기</button><button role="tab" data-mg="dodge" aria-selected="${mgMode==="dodge"}">불꽃피하기</button><button role="tab" data-mg="berk" aria-selected="${mgMode==="berk"}">버크 만들기</button><button role="tab" data-mg="tama" aria-selected="${mgMode==="tama"}">드래곤 키우기</button><button role="tab" data-mg="rhythm" aria-selected="${mgMode==="rhythm"}">리듬</button><button role="tab" data-mg="magic" aria-selected="${mgMode==="magic"}">불꽃 마법</button><button role="tab" data-mg="tetris" aria-selected="${mgMode==="tetris"}">테트리스</button></div><button class="btn ghost small mgrank" data-mgrank>랭킹</button><button class="btn ghost small mgfsbtn" data-mgfull aria-pressed="${mgFull}">${mgFull?"닫기":"전체화면"}</button></div>`; }
-function bindMgTabs(){ document.querySelectorAll("[data-mgrank]").forEach(b=>b.onclick=()=>openRank({suika:"suika",fly:"fly",hide:"hide",mem:"mem_"+(M&&M.lv||"easy"),sling:"sling",run:"run",stack:"stack",simon:"simon",egg:"egg",dodge:"dodge",rhythm:"rhythm",magic:"magic",tetris:"tetris"}[mgMode]||"suika")); const on=document.querySelector('.mgtabs [aria-selected="true"]'); if(on){ const bar=on.parentElement; bar.scrollLeft=on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2; } document.querySelectorAll("[data-mgfull]").forEach(b=>b.onclick=()=>mgSetFull(!mgFull)); document.querySelectorAll("[data-mg]").forEach(b=>b.onclick=()=>{ if(mgMode===b.dataset.mg) return; mgMode=b.dataset.mg; try{ localStorage.setItem("httyd-mgMode",mgMode); }catch(e){} renderClick(true); }); }
+function mgTabsHtml(){ return `<div class="mgbar"><div class="mgtabs" role="tablist"><button role="tab" data-mg="click" aria-selected="${mgMode==="click"}">클릭커</button><button role="tab" data-mg="suika" aria-selected="${mgMode==="suika"}">수박게임</button><button role="tab" data-mg="fly" aria-selected="${mgMode==="fly"}">비행</button><button role="tab" data-mg="hide" aria-selected="${mgMode==="hide"}">숨바꼭질</button><button role="tab" data-mg="mem" aria-selected="${mgMode==="mem"}">짝맞추기</button><button role="tab" data-mg="sling" aria-selected="${mgMode==="sling"}">불뿜기</button><button role="tab" data-mg="run" aria-selected="${mgMode==="run"}">달리기</button><button role="tab" data-mg="stack" aria-selected="${mgMode==="stack"}">탑쌓기</button><button role="tab" data-mg="simon" aria-selected="${mgMode==="simon"}">순서기억</button><button role="tab" data-mg="egg" aria-selected="${mgMode==="egg"}">알 받기</button><button role="tab" data-mg="dodge" aria-selected="${mgMode==="dodge"}">불꽃피하기</button><button role="tab" data-mg="berk" aria-selected="${mgMode==="berk"}">버크 만들기</button><button role="tab" data-mg="tama" aria-selected="${mgMode==="tama"}">드래곤 키우기</button><button role="tab" data-mg="rhythm" aria-selected="${mgMode==="rhythm"}">리듬</button><button role="tab" data-mg="magic" aria-selected="${mgMode==="magic"}">불꽃 마법</button><button role="tab" data-mg="tetris" aria-selected="${mgMode==="tetris"}">테트리스</button><button role="tab" data-mg="race" aria-selected="${mgMode==="race"}">스카이 레이스</button></div>${MG_NORESET.includes(mgMode)?"":`<button class="btn ghost small mgreset" data-mgreset title="처음부터 다시">다시하기</button>`}<button class="btn ghost small mgrank" data-mgrank>랭킹</button><button class="btn ghost small mgfsbtn" data-mgfull aria-pressed="${mgFull}">${mgFull?"닫기":"전체화면"}</button></div>`; }
+function bindMgTabs(){ bindMgReset(); document.querySelectorAll("[data-mgrank]").forEach(b=>b.onclick=()=>openRank({suika:"suika",fly:"fly",hide:"hide",mem:"mem_"+(M&&M.lv||"easy"),sling:"sling",run:"run",stack:"stack",simon:"simon",egg:"egg",dodge:"dodge",rhythm:"rhythm",magic:"magic",tetris:"tetris"}[mgMode]||"suika")); const on=document.querySelector('.mgtabs [aria-selected="true"]'); if(on){ const bar=on.parentElement; bar.scrollLeft=on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2; } document.querySelectorAll("[data-mgfull]").forEach(b=>b.onclick=()=>mgSetFull(!mgFull)); document.querySelectorAll("[data-mg]").forEach(b=>b.onclick=()=>{ if(mgMode===b.dataset.mg) return; mgMode=b.dataset.mg; try{ localStorage.setItem("httyd-mgMode",mgMode); }catch(e){} renderClick(true); }); }
 
 // ---------- 미니게임: 드래곤 비행 · 드래곤 숨바꼭질 ----------
 let mini={flyBest:0,hideBest:0};
@@ -2126,7 +2127,7 @@ function hdSpawn(){
     const life=Math.max(1200,1900-e/45), gold=!viking&&Math.random()<0.08;
     const tok={viking,gold,pic,until:performance.now()+life};
     H.holes[i]=tok; hdShow(i,tok);
-    setTimeout(()=>{ if(H.holes[i]===tok){ H.holes[i]=null; hdHide(i); } },life); }
+    setTimeout(()=>{ if(H.holes&&H.holes[i]===tok){ H.holes[i]=null; hdHide(i); } },life); }
   hdT=setTimeout(hdSpawn,Math.max(650,1150-e/60)*(0.75+Math.random()*0.5));
 }
 function hdShow(i,tok){ const h=document.querySelector(`[data-hd="${i}"]`); if(!h) return; const pop=h.querySelector(".hdpop");
@@ -3177,6 +3178,12 @@ const HOME_SECTIONS=[
    <li>버틴 시간(초)이 <b>랭킹</b>에 올라가요.</li></ul>`},
  ]},
  {title:"모두 함께",items:[
+  {id:"race",ico:"🏁",col:"#2E6F8E",name:"스카이 레이스",sum:"친구들의 유령 드래곤과 하늘 경주",go:()=>goMini("race"),
+   det:`<p>드래곤을 타고 <b>하늘 코스를 누가 더 빨리 나는지</b> 겨뤄요.</p>
+   <ul><li>누른 채 좌우로 움직여 조종해요. <b>금색 링</b>을 지나면 빨라지고, <b>번개 구름</b>에 닿으면 잠깐 느려져요.</li>
+   <li>코스는 <b>매주 월요일</b>에 바뀌고, 그 주에는 모두 같은 코스를 날아요.</li>
+   <li>내 최고 기록은 <b>유령 드래곤</b>으로 저장돼요. 친구가 레이스하면 내 유령이 반투명하게 같이 날아요. 친구 기록이 없으면 투슬리스가 같이 날아요.</li>
+   <li>위쪽 막대에서 모두의 위치를, 오른쪽 위에서 지금 몇 등인지 볼 수 있어요. 끝나면 물고기를 받고, <b>이번 주 순위</b>와 <b>자랑하기</b>도 돼요.</li></ul>`},
   {id:"rank",ico:"🥇",col:"#1E3440",name:"랭킹",sum:"게임별 순위 보기",go:()=>openRank("suika"),
    det:`<p>미니게임마다 멤버들의 <b>최고 기록 순위</b>를 봐요.</p>
    <ul><li>같은 기록이면 <b>먼저 세운 사람</b>이 위예요.</li>
@@ -3732,6 +3739,146 @@ function initG6Cloud(d){
   d.doc("settings/tour").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tour"]&&!s.metadata.hasPendingWrites){ const v=JSON.parse(JSON.stringify(s.data()||{})); tourClaim={claimed:Object.assign({},v.claimed||{},tourClaim.claimed||{})}; } evLoaded["settings/tour"]=true; },()=>{});
   d.doc("settings/raid").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/raid"]&&!s.metadata.hasPendingWrites){ const v=JSON.parse(JSON.stringify(s.data()||{})); raidMine=Object.assign({day:"",n:0},v,{claimed:Object.assign({},v.claimed||{},raidMine.claimed||{})}); } evLoaded["settings/raid"]=true; },()=>{});
   setTimeout(()=>{ tourInit(); raidInit(); },2500); }
+
+/* ===== 스카이 레이스: 매주 같은 하늘 코스를 날아서, 가족·친구들의 '유령 드래곤'과 시간 경주 ===== */
+// 코스는 이번 주 월요일 날짜로 정해져서 모두 같은 코스를 날아요. 내 최고 기록의 비행 경로가 '유령'으로 저장돼서
+// 다른 사람이 레이스할 때 반투명 드래곤으로 같이 날아요. 실시간 연결이 없어서 무료 요금제로도 넉넉해요.
+const RC_RINGS=48, RC_GAP=300, RC_LEN=RC_RINGS*RC_GAP+260, RC_CAM=GH*0.72, RC_SAMPLE=100; // 100ms마다 위치 기록
+const RC_COLORS=["#F07238","#9B5DE5","#2EB872","#E63946","#3FA7D6","#FFB000"];
+let RC=null, rcGhosts=[], rcCourseId="", rcCourse=null, rcLoading=null;
+function rcRng(seed){ let a=0; for(const ch of seed) a=(a*31+ch.charCodeAt(0))|0; return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function rcMakeCourse(id){ const r=rcRng("sky-"+id), rings=[], storms=[], fish=[]; let x=GW/2;
+  for(let i=0;i<RC_RINGS;i++){ const swing=60+Math.min(1,i/20)*90; x=Math.max(70,Math.min(GW-70,x+(r()-.5)*2*swing));
+    rings.push({x:Math.round(x),y:(i+1)*RC_GAP,w:i<6?130:Math.max(92,124-i)}); }
+  for(let i=4;i<RC_RINGS-1;i++){ if(r()<.55){ const a=rings[i], b=rings[i+1], my=(a.y+b.y)/2, mx=(a.x+b.x)/2; // 두 링 사이, 지나는 길에서 살짝 비켜서
+      let sx=mx+(r()<.5?-1:1)*(70+r()*60); sx=Math.max(40,Math.min(GW-40,sx)); storms.push({x:Math.round(sx),y:Math.round(my),r:34+r()*12}); }
+    if(r()<.35) fish.push({x:Math.round(rings[i].x+(r()-.5)*90),y:rings[i].y+RC_GAP/2+40}); }
+  return {id,rings,storms,fish}; }
+function rcEnsureCourse(){ const id=weekStart(0); if(rcCourseId!==id||!rcCourse){ rcCourseId=id; rcCourse=rcMakeCourse(id); rcGhosts=[]; rcLoading=null; } return rcCourse; }
+function rcEncode(s){ return s.map(([x,y])=>Math.round(x).toString(36)+","+Math.round(y).toString(36)).join(";"); }
+function rcDecode(p){ try{ return String(p||"").split(";").filter(Boolean).map(t=>{ const [a,b]=t.split(","); return [parseInt(a,36),parseInt(b,36)]; }).filter(v=>isFinite(v[0])&&isFinite(v[1])); }catch(e){ return []; } }
+function rcFmt(ms){ return (ms/1000).toFixed(2)+"초"; }
+// 친구가 아직 없을 때 같이 나는 투슬리스: 링 가운데를 따라 일정한 속도로
+function rcBot(c){ const v=.32, pts=[]; let t=0;
+  for(;;){ const y=Math.min(RC_LEN,v*t); const i=Math.min(c.rings.length-1,Math.floor(y/RC_GAP)); const a=i?c.rings[i-1]:{x:GW/2,y:0}, b=c.rings[i]||a;
+    const k=b.y===a.y?1:Math.max(0,Math.min(1,(y-a.y)/(b.y-a.y))); pts.push([a.x+(b.x-a.x)*k,y]); if(y>=RC_LEN) break; t+=RC_SAMPLE; }
+  return {uid:"bot",name:"투슬리스",ms:Math.round(RC_LEN/v),pts,bot:true}; }
+async function rcLoadGhosts(){ const c=rcEnsureCourse(); if(rcLoading) return rcLoading;
+  rcLoading=(async()=>{ let list=[]; try{ list=window.FB&&FB.ghost?await FB.ghost.list(c.id):[]; }catch(e){ list=[]; }
+    list=list.map(g=>Object.assign(g,{pts:rcDecode(g.p)})).filter(g=>g.pts.length>5&&g.ms>0).sort((a,b)=>a.ms-b.ms);
+    const mine=list.find(g=>g.me), others=list.filter(g=>!g.me).slice(0,4);
+    rcGhosts=[...(mine?[mine]:[]),...others]; if(rcGhosts.length<2) rcGhosts.push(rcBot(c));
+    rcGhosts.forEach((g,i)=>g.col=g.me?"#FFFFFF":g.bot?"#22313A":RC_COLORS[i%RC_COLORS.length]);
+    if(mine&&(!mini.raceBest||mini.raceBest.course!==c.id||mine.ms<mini.raceBest.ms)){ mini.raceBest={course:c.id,ms:mine.ms}; saveMiniAll(); }
+    return rcGhosts; })();
+  return rcLoading; }
+function rcGhostAt(g,ms){ const f=ms/RC_SAMPLE, i=Math.floor(f); if(i>=g.pts.length-1){ const l=g.pts[g.pts.length-1]; return {x:l[0],y:l[1],done:ms>=g.ms}; }
+  const a=g.pts[Math.max(0,i)], b=g.pts[i+1], k=f-i; return {x:a[0]+(b[0]-a[0])*k,y:a[1]+(b[1]-a[1])*k,done:false}; }
+function rcNew(){ const c=rcEnsureCourse(); return {state:"ready",x:GW/2,tx:GW/2,y:0,v:0,boost:0,slow:0,ms:0,count:0,t:0,ring:0,rings:0,caught:0,got:new Set(),hit:new Set(),samples:[[GW/2,0]],nextS:RC_SAMPLE,fx:[],off:null,c}; }
+function rcStart(){ if(!RC||RC.state!=="ready") return; RC.state="count"; RC.count=180; }
+function rcEnd(){ RC.state="over"; const c=RC.c, ms=Math.round(RC.ms); RC.samples.push([RC.x,RC_LEN]);
+  const prev=mini.raceBest&&mini.raceBest.course===c.id?mini.raceBest.ms:0, nb=!prev||ms<prev;
+  if(nb){ mini.raceBest={course:c.id,ms}; }
+  const tv=Math.max(1,tapValue()), fish=miniGiveFish((RC.rings*2+RC.caught*3+20)*tv); saveMiniAll(); mgSet("rcBest",rcFmt(mini.raceBest.ms));
+  const field=rcGhosts.filter(g=>!g.me), place=1+field.filter(g=>g.ms<ms).length;
+  mgOver("race",nb?"이번 주 최고 기록!":"도착!",rcFmt(ms),[`링 ${RC.rings}/${RC_RINGS}개 통과 · ${place}등 (같이 난 ${field.length+1}마리 중)`,`${FISH_SVG} 클릭커 물고기 ${fmt(fish)}마리 받았어요`],()=>{ RC=rcNew(); mgSet("rcTime","0.00초"); mgSet("rcRing","0/"+RC_RINGS); rcLoadGhosts(); });
+  const card=document.querySelector("#raceOver .skocard"); if(card){ const row=document.createElement("div"); row.className="bragrow";
+    row.innerHTML=`<button class="btn small kakao" data-brag>자랑하기</button><button class="btn ghost small" data-rk>이번 주 순위</button><p class="note bragrank" style="margin:0;flex:1 1 100%"></p>`; card.appendChild(row);
+    row.querySelector("[data-brag]").onclick=e=>{ e.stopPropagation(); shareCard({game:"스카이 레이스",big:rcFmt(ms)}); };
+    row.querySelector("[data-rk]").onclick=e=>{ e.stopPropagation(); rcBoard(); };
+    const info=row.querySelector(".bragrank");
+    if(window.FB&&FB.ghost&&nb){ info.textContent="유령 드래곤 저장 중…";
+      FB.ghost.save(c.id,ms,rcEncode(RC.samples)).then(r=>{ rcLoading=null; info.textContent=r&&r.place?`이번 주 ${r.place}등이에요! (${r.total}명 중) 친구들이 내 유령 드래곤과 경주하게 돼요.`:""; }).catch(()=>{ info.textContent="기록 저장에 실패했어요. 인터넷을 확인해 주세요."; }); } } }
+MG_GAMES.race={step(dt){
+  const cv=$("#raceCanvas"); if(!cv||!RC) return; const ctx=mgCtx(cv), c=RC.c; RC.t+=dt;
+  if(RC.state==="count"){ RC.count-=dt; if(RC.count<=0){ RC.state="play"; RC.v=3; } }
+  if(RC.state==="play"){
+    RC.ms+=dt*1000/60; const target=4.4+Math.min(1.2,RC.ms/40000);
+    RC.v+=(target-RC.v)*.03*dt; let sp=RC.v+RC.boost; if(RC.slow>0){ sp*=.45; RC.slow-=dt; } RC.boost=Math.max(0,RC.boost-.04*dt);
+    const oy=RC.y; RC.y=Math.min(RC_LEN,RC.y+sp*dt); RC.x+=(RC.tx-RC.x)*Math.min(1,.22*dt);
+    while(RC.ring<c.rings.length&&c.rings[RC.ring].y<=RC.y){ const r=c.rings[RC.ring];
+      if(Math.abs(RC.x-r.x)<=r.w/2){ RC.rings++; RC.boost=Math.min(4,RC.boost+2.2); RC.fx.push({x:r.x,y:r.y,t:0,ok:true}); } else RC.fx.push({x:r.x,y:r.y,t:0,ok:false});
+      RC.ring++; mgSet("rcRing",RC.rings+"/"+RC_RINGS); }
+    c.storms.forEach((s,i)=>{ if(!RC.hit.has(i)&&Math.hypot(RC.x-s.x,RC.y-s.y)<s.r+16){ RC.hit.add(i); RC.slow=50; RC.boost=0; RC.fx.push({x:s.x,y:s.y,t:0,zap:true}); } });
+    c.fish.forEach((f,i)=>{ if(!RC.got.has(i)&&Math.hypot(RC.x-f.x,RC.y-f.y)<34){ RC.got.add(i); RC.caught++; } });
+    while(RC.ms>=RC.nextS){ RC.samples.push([RC.x,oy+(RC.y-oy)]); RC.nextS+=RC_SAMPLE; }
+    mgSet("rcTime",rcFmt(RC.ms)); if(RC.y>=RC_LEN){ rcEnd(); } }
+  // 하늘 (캔버스에 직접 그려서 다크 모드에도 번쩍이지 않아요)
+  const dark=typeof skDark==="function"&&skDark(), k=Math.min(1,RC.y/RC_LEN);
+  mgSky(ctx,dark?"#0D1B2A":`hsl(${205-k*25},62%,${62-k*14}%)`,dark?"#1B3A4B":`hsl(${190+k*140},55%,${80-k*18}%)`);
+  const cam=RC.y, sy=wy=>RC_CAM-(wy-cam);
+  ctx.fillStyle=dark?"rgba(255,255,255,.07)":"rgba(255,255,255,.55)";
+  for(let i=0;i<9;i++){ const py=((i*173+cam*.35)%(GH+120))-60, px=(i*131)%GW; ctx.beginPath(); ctx.ellipse(px,py,46+i%3*14,15,0,0,Math.PI*2); ctx.fill(); }
+  // 출발선, 결승선
+  for(const [wy,lab] of [[0,"출발"],[RC_LEN,"결승"]]){ const y=sy(wy); if(y<-30||y>GH+30) continue;
+    for(let i=0;i<14;i++){ ctx.fillStyle=(i%2)?"#fff":"#22313A"; ctx.fillRect(i*30,y-6,30,6); ctx.fillStyle=(i%2)?"#22313A":"#fff"; ctx.fillRect(i*30,y,30,6); }
+    ctx.fillStyle=dark?"#fff":"#22313A"; ctx.font="bold 16px sans-serif"; ctx.textAlign="center"; ctx.fillText(lab,GW/2,y-14); }
+  // 폭풍 구름
+  c.storms.forEach((s,i)=>{ const y=sy(s.y); if(y<-60||y>GH+60) return; ctx.save(); ctx.globalAlpha=RC.hit.has(i)?.35:1;
+    ctx.fillStyle="#3B4250"; for(const [dx,dy,r] of [[-18,4,.8],[0,-6,1],[20,4,.8],[0,8,.9]]){ ctx.beginPath(); ctx.arc(s.x+dx,y+dy,s.r*.62*r,0,Math.PI*2); ctx.fill(); }
+    ctx.strokeStyle="#FFD34D"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(s.x-4,y+10); ctx.lineTo(s.x+6,y+20); ctx.lineTo(s.x-2,y+22); ctx.lineTo(s.x+8,y+36); ctx.stroke(); ctx.restore(); });
+  c.fish.forEach((f,i)=>{ if(RC.got.has(i)) return; const y=sy(f.y); if(y>-30&&y<GH+30) mgFish(ctx,f.x,y+Math.sin((RC.t+i*20)/9)*3); });
+  // 링: 뒷면 → (드래곤) → 앞면 순서로 그려서 링을 통과하는 느낌
+  const ringDraw=(r,i,front)=>{ const y=sy(r.y); if(y<-40||y>GH+40) return; const passed=i<RC.ring;
+    ctx.save(); ctx.lineWidth=front?7:5; ctx.strokeStyle=passed?"rgba(46,184,114,.55)":i===RC.ring?"#FFD34D":"#F0B429";
+    ctx.beginPath(); ctx.ellipse(r.x,y,r.w/2,16,0,front?0:Math.PI,front?Math.PI:Math.PI*2); ctx.stroke(); ctx.restore(); };
+  c.rings.forEach((r,i)=>ringDraw(r,i,false));
+  // 유령 드래곤들
+  const me={y:RC.y}; let place=1;
+  rcGhosts.forEach((g,gi)=>{ const p=rcGhostAt(g,RC.state==="play"||RC.state==="over"?RC.ms:0); if(!g.me&&p.y>RC.y) place++; const y=sy(p.y);
+    if(y>-40&&y<GH+40){ ctx.save(); ctx.globalAlpha=.5; ctx.fillStyle=g.col; ctx.beginPath(); ctx.arc(p.x,y,18,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=.85;
+      ctx.fillStyle=g.me||g.bot?"#22313A":"#fff"; ctx.font="bold 14px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(g.bot?"🐉":(g.name||"?").slice(0,1),p.x,y+1);
+      ctx.fillStyle=dark?"#fff":"#22313A"; ctx.font="bold 12px sans-serif"; ctx.fillText(g.me?"내 기록":g.name,p.x,y-28-(Math.abs(p.y-RC.y)<40?gi*15:0)); ctx.restore(); } });
+  const tg=ckTarget(); drawRoundImg(ctx,tg&&tg.url,RC.x,RC_CAM,22,"#3FA7D6");
+  if(RC.slow>0){ ctx.fillStyle="#FFD34D"; ctx.font="bold 15px sans-serif"; ctx.textAlign="center"; ctx.fillText("찌릿! 느려졌어요",RC.x,RC_CAM+44); }
+  if(RC.boost>1.2){ ctx.fillStyle="rgba(255,211,77,.7)"; for(let i=0;i<3;i++){ ctx.beginPath(); ctx.ellipse(RC.x+(i-1)*10,RC_CAM+30+i%2*8,4,10+RC.boost*3,0,0,Math.PI*2); ctx.fill(); } }
+  c.rings.forEach((r,i)=>ringDraw(r,i,true));
+  RC.fx=RC.fx.filter(f=>(f.t+=dt)<40); for(const f of RC.fx){ const y=sy(f.y); ctx.save(); ctx.globalAlpha=1-f.t/40; ctx.font="bold 18px sans-serif"; ctx.textAlign="center";
+    ctx.fillStyle=f.zap?"#FFD34D":f.ok?"#2EB872":"#9AA5AB"; ctx.fillText(f.zap?"번쩍!":f.ok?"슝! 빨라짐":"놓쳤어요",f.x,y-24-f.t); ctx.restore(); }
+  // 위쪽 진행 막대: 모두의 위치
+  ctx.fillStyle="rgba(20,32,40,.55)"; ctx.beginPath(); ctx.roundRect(16,12,GW-32,26,13); ctx.fill();
+  const bx=v=>30+(GW-60)*Math.min(1,v/RC_LEN);
+  rcGhosts.forEach(g=>{ const p=rcGhostAt(g,RC.state==="ready"||RC.state==="count"?0:RC.ms); ctx.fillStyle=g.col; ctx.beginPath(); ctx.arc(bx(p.y),25,6,0,Math.PI*2); ctx.fill(); });
+  ctx.fillStyle="#FFD34D"; ctx.beginPath(); ctx.arc(bx(RC.y),25,8,0,Math.PI*2); ctx.fill(); ctx.strokeStyle="#22313A"; ctx.lineWidth=2; ctx.stroke();
+  if(RC.state==="play"){ ctx.fillStyle="rgba(20,32,40,.62)"; ctx.beginPath(); ctx.roundRect(GW-92,48,76,34,10); ctx.fill(); ctx.fillStyle="#fff"; ctx.font="bold 18px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(place+"등",GW-54,66); }
+  if(RC.state==="count"){ const n=Math.ceil(RC.count/60); ctx.fillStyle="rgba(20,32,40,.6)"; ctx.beginPath(); ctx.arc(GW/2,GH*.38,56,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.font="bold 56px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(n,GW/2,GH*.38+2); }
+  if(RC.state==="ready") mgTapText(ctx,rcLoading?"눌러서 출발!":"코스 준비 중…",GH*0.34);
+}};
+function renderRace(){ if(!RC||RC.state==="over") RC=rcNew(); rcLoadGhosts();
+  const best=mini.raceBest&&mini.raceBest.course===rcEnsureCourse().id?rcFmt(mini.raceBest.ms):"-";
+  const cv=mgMount("race",`<div><span>시간</span><b id="rcTime">${rcFmt(RC.ms)}</b></div><div><span>링</span><b id="rcRing">${RC.rings}/${RC_RINGS}</b></div><div><span>이번 주 최고</span><b id="rcBest">${best}</b></div>`,
+    "누른 채 좌우로 움직여 드래곤을 조종해요. 금색 링을 지나면 빨라지고, 번개 구름에 닿으면 느려져요. 반투명 드래곤은 친구들의 기록이에요. 코스는 매주 월요일에 바뀌어요.");
+  if(!cv) return;
+  document.querySelectorAll("[data-mgrank]").forEach(b=>b.onclick=rcBoard);
+  cv.addEventListener("pointerdown",e=>{ e.preventDefault(); const p=mgPt(cv,e); RC.off=RC.x-p.x; if(RC.state==="ready") rcStart(); try{cv.setPointerCapture(e.pointerId);}catch(_){} });
+  cv.addEventListener("pointermove",e=>{ if(RC.off==null) return; const p=mgPt(cv,e); RC.tx=Math.max(22,Math.min(GW-22,p.x+RC.off)); });
+  const up=()=>{ RC.off=null; }; cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up); }
+document.addEventListener("keydown",e=>{ if(view!=="click"||mgMode!=="race"||!RC||e.target.closest("input,textarea")) return;
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ e.preventDefault(); RC.tx=Math.max(22,Math.min(GW-22,RC.tx+(e.key==="ArrowLeft"?-50:50))); }
+  if((e.key===" "||e.key==="Enter")&&RC.state==="ready"){ e.preventDefault(); rcStart(); } });
+async function rcBoard(){ const c=rcEnsureCourse();
+  const paint=(list,err)=>openSheet(`<div class="rkhead"><h2>스카이 레이스 · 이번 주 순위</h2><button class="btn ghost small" data-evclose>닫기</button></div>
+    <p class="note" style="margin:0">${c.id.slice(5).replace("-","월 ")}일(월)부터 쓰는 코스예요. 빠를수록 위, 같은 시간이면 먼저 세운 사람이 위예요. 다음 월요일에 새 코스로 바뀌어요.</p>
+    <ol class="rklist">${list?list.map((r,i)=>`<li class="${r.me?"me":""}"><span class="rkp">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><b>${esc(r.name||"이름 없음")}${r.me?" (나)":""}</b><span class="rks">${rcFmt(r.ms)}</span></li>`).join("")||`<p class="note">아직 아무도 안 날았어요. 첫 번째 기록을 세워 보세요!</p>`:`<p class="note">${err?"순위를 불러오지 못했어요.":"불러오는 중…"}</p>`}</ol>`);
+  paint(null); try{ const l=await FB.ghost.list(c.id); l.sort((a,b)=>(a.ms-b.ms)||(a.at-b.at)); paint(l); }catch(e){ paint(null,true); } }
+
+/* ===== 모든 미니게임 '다시하기': 하던 판을 버리고 처음부터 (실수 방지로 두 번 눌러야 해요) ===== */
+const MG_NORESET=["click","tama","berk"];
+function mgRestart(){ const m=mgMode;
+  if(m==="suika"){ G=skNewGame(); const o=$("#skOver"); if(o) o.hidden=true; skHud(); skRenderItems(); return; }
+  if(m==="fly"){ F=flyNew(); const o=$("#flyOver"); if(o) o.hidden=true; flyHud(); return; }
+  if(m==="hide"){ clearTimeout(hdT); H={state:"ready"}; }
+  else if(m==="mem"){ M={state:"ready",lv:M.lv}; }
+  else if(m==="simon"){ SM={state:"ready",seq:[],pos:0,round:0}; }
+  else if(m==="rhythm"){ if(RH&&RH.stop) try{ RH.stop(); }catch(e){} RH=null; }
+  else if(m==="run") R=null; else if(m==="stack") T=null; else if(m==="sling") S=null; else if(m==="egg") E=null;
+  else if(m==="dodge") D=null; else if(m==="magic") MW=null; else if(m==="tetris") TT=null; else if(m==="race") RC=null;
+  else return;
+  renderClick(true); }
+function bindMgReset(){ document.querySelectorAll("[data-mgreset]").forEach(b=>{ let armed=0;
+  b.onclick=()=>{ if(Date.now()-armed<2500){ armed=0; mgRestart(); toast("처음부터 다시 시작해요!"); return; }
+    armed=Date.now(); const t=b.textContent; b.textContent="한 번 더!"; b.classList.add("armed"); setTimeout(()=>{ if(b.isConnected){ b.textContent=t; b.classList.remove("armed"); } },2500); }; }); }
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
 

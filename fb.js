@@ -213,6 +213,15 @@
         tx.update(ref,{hp:v.hp-d}); tx.set(mine,{dmg:Math.floor(prev.dmg||0)+d,n:Math.floor(prev.n||0)+1,name:myName.slice(0,20)||"이름 없음",at:firebase.firestore.FieldValue.serverTimestamp()});
         return {dealt:d,hp:v.hp-d}; }); }
   };
+  /* 스카이 레이스 유령: ghost/{주 시작일}/g/{uid} = {name, ms, p(경로), at}. 더 빨라질 때만 고쳐요 */
+  const ghost={
+    async list(course){ const s=await fs.collection("ghost/"+course+"/g").get();
+      return s.docs.map(d=>{ const v=d.data()||{}; const at=v.at&&v.at.toMillis?v.at.toMillis():+v.at||0; return {uid:d.id,me:!!user&&d.id===user.uid,name:String(v.name||"").slice(0,20),ms:Math.floor(+v.ms||0),p:String(v.p||""),at}; }); },
+    async save(course,ms,p){ if(!user) return null; ms=Math.floor(ms); if(!(ms>0)||p.length>=40000) return null;
+      const ref=fs.doc("ghost/"+course+"/g/"+user.uid); let cur=null; try{ const s=await ref.get(); if(s.exists) cur=s.data(); }catch(e){}
+      if(!cur||ms<(+cur.ms||Infinity)) await ref.set({name:(myName||"이름 없음").slice(0,20),ms,p,at:firebase.firestore.FieldValue.serverTimestamp()});
+      const l=(await ghost.list(course)).sort((a,b)=>(a.ms-b.ms)||(a.at-b.at)); const i=l.findIndex(r=>r.me); return {place:i+1,total:l.length}; }
+  };
   /* 접속 표시: presence/{uid} = {name, on, at(서버 시간)}. 보고 있는 동안 1분마다, 나가면 on:false */
   const presence=(()=>{ let timer=null, lastW=0, skew=0, unsub=null; const subs=new Set(); let list=[];
     const ts=v=>v&&typeof v.toMillis==="function"?v.toMillis():(+v||0);
@@ -230,7 +239,7 @@
       .sort((a,b)=>(b.online-a.online)||(b.me-a.me)||(a.ago-b.ago)); }
     return { startMe, watch(f){ ensure(); subs.add(f); f(list.length?view():[]); return ()=>subs.delete(f); }, view };
   })();
-  window.FB={ publishBlobs, presence, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  window.FB={ publishBlobs, presence, ghost, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{

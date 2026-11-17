@@ -162,6 +162,7 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .raidinfo b{font-family:var(--display);font-size:1.5rem}.raidinfo span{font-size:.8rem;opacity:.85}
 .raidhp{height:22px}.raidhp .hpf{background:linear-gradient(90deg,#C0392B,#E4572E)}
 .raidlast{margin:0;text-align:center;font-weight:700;color:#E4572E}
+.mgreset.armed{background:var(--ember);color:var(--ember-ink,#fff);border-color:var(--ember)}
 /* 다크 모드: 밝은 판들도 처음부터 어둡게 칠해 둠 → 브라우저가 억지로 칠할 게 없어서 번쩍임이 줄어듦 */
 .plus{will-change:transform,opacity;contain:layout paint}
 @media (prefers-color-scheme: dark){
