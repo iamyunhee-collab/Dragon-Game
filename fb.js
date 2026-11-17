@@ -7,7 +7,7 @@
   const SHARED_COLL=new Set(["photos","live","petdefs","petphotos","blobs"]);
   const SHARED_DOC=new Set(["settings/rarity","settings/extras","settings/battle","settings/minidefaults"]);
   const BLANK="";
-  let app,auth,fs,user=null,isOwner=false,readyResolve,readyReject;
+  let app,auth,fs,user=null,isOwner=false,myName="",readyResolve,readyReject;
   const ready=new Promise((a,b)=>{ readyResolve=a; readyReject=b; });
   const $=s=>document.querySelector(s);
   const escH=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -116,13 +116,13 @@
   async function afterLogin(u){
     user=u; isOwner=false;
     gate(`<h1>버크 드래곤 도감</h1><p>들어가는 중…</p>`);
-    try{ await fs.doc("content/main/meta/admin").get(); isOwner=true; }catch(e){ isOwner=false; }
+    try{ const a=await fs.doc("content/main/meta/admin").get(); isOwner=true; myName=(a.exists&&a.data().name)||"관리자"; }catch(e){ isOwner=false; }
     if(isOwner){ return start(); }
     if(memberUnsub) memberUnsub();
     let asked=null;
     try{ const r=await fs.doc("requests/"+u.uid).get(); asked=r.exists; }catch(e){}
     memberUnsub=fs.doc("content/main/members/"+u.uid).onSnapshot(s=>{
-      if(s.exists){ memberUnsub(); memberUnsub=null; fs.doc("requests/"+u.uid).delete().catch(()=>{}); start(); }
+      if(s.exists){ myName=String((s.data()||{}).name||"").slice(0,20); memberUnsub(); memberUnsub=null; fs.doc("requests/"+u.uid).delete().catch(()=>{}); start(); }
       else showPending(asked);
     },()=>showPending(asked));
   }
@@ -143,6 +143,7 @@
     watchMembers(cb){ return fs.collection("content/main/members").onSnapshot(s=>cb(s.docs.map(d=>({uid:d.id,...d.data()}))),()=>cb([])); },
     async approve(r){ await fs.doc("content/main/members/"+r.uid).set({name:String(r.name||"").slice(0,20),at:Date.now()}); await fs.doc("requests/"+r.uid).delete(); },
     async deny(uid){ await fs.doc("requests/"+uid).delete(); },
+    async setName(n){ n=String(n||"").trim().slice(0,20); if(!n) return; await fs.doc("content/main/meta/admin").set({name:n,at:Date.now()},{merge:true}); myName=n; },
     async remove(uid){ await fs.doc("content/main/members/"+uid).delete(); },
     async gift(uid,g){ const id="gift-"+Date.now()+"-"+Math.floor(Math.random()*1e6);
       await fs.doc("users/"+(uid||user.uid)+"/purse/"+id).set({gems:Math.max(0,+g.gems||0),coins:Math.max(0,+g.coins||0),tickets:Math.max(0,+g.tickets||0),completions:0,at:Date.now()}); },
@@ -166,7 +167,29 @@
     for(const id of [...new Set(ids)]){ if(!validId(id)) continue;
       try{ const c=await fs.doc("content/main/blobs/"+id).get(); if(c.exists) continue;
         const u=await fs.doc("users/"+user.uid+"/blobs/"+id).get(); if(u.exists) await fs.doc("content/main/blobs/"+id).set(u.data()); }catch(e){} } }
-  window.FB={ publishBlobs, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  /* 랭킹: rank/{게임}/s/{uid} 에 내 최고 기록 하나. 더 좋아질 때만 고치고, 시간은 서버 시간. 같은 기록이면 먼저 세운 사람이 위 */
+  const RANK_IDS=["suika","fly","hide","mem_easy","mem_normal","mem_hard","sling","run","stack","simon","egg","dodge"];
+  const rank={
+    async list(game){ if(!RANK_IDS.includes(game)) return []; const low=game.startsWith("mem_");
+      const s=await fs.collection("rank/"+game+"/s").get();
+      const arr=s.docs.map(d=>{ const v=d.data()||{}; const at=v.at&&v.at.toDate?v.at.toDate():typeof v.at==="number"?new Date(v.at):null;
+        return {uid:d.id,name:String(v.name||""),score:+v.score||0,at,me:!!user&&d.id===user.uid}; });
+      const t=r=>r.at?r.at.getTime():Number.MAX_SAFE_INTEGER;
+      arr.sort((a,b)=>(low?a.score-b.score:b.score-a.score)||(t(a)-t(b)));
+      arr.forEach((r,i)=>r.place=i+1); return arr; },
+    async seed(game,score){ if(!user||!RANK_IDS.includes(game)) return; score=Math.max(0,Math.floor(+score||0)); if(!score) return; const low=game.startsWith("mem_");
+      const ref=fs.doc("rank/"+game+"/s/"+user.uid); let cur=null; try{ const s=await ref.get(); if(s.exists) cur=s.data(); }catch(e){ return; }
+      if(!cur||(low?score<cur.score:score>cur.score)) await ref.set({score,name:myName.slice(0,20)||"이름 없음",at:firebase.firestore.FieldValue.serverTimestamp()}); },
+    async submit(game,score){ if(!user||!RANK_IDS.includes(game)) return null; score=Math.max(0,Math.floor(+score||0)); const low=game.startsWith("mem_");
+      if(low&&score<=0) return null;
+      const ref=fs.doc("rank/"+game+"/s/"+user.uid); let cur=null;
+      try{ const s=await ref.get(); if(s.exists) cur=s.data(); }catch(e){}
+      const better=!cur||(low?score<cur.score:score>cur.score);
+      if(better&&(score>0||low)) await ref.set({score,name:myName.slice(0,20)||"이름 없음",at:firebase.firestore.FieldValue.serverTimestamp()});
+      const list=await rank.list(game); const me=list.find(r=>r.me);
+      return {improved:better&&score>0,place:me?me.place:null,total:list.length}; }
+  };
+  window.FB={ publishBlobs, rank, get name(){ return myName; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{

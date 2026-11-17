@@ -23,6 +23,22 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .admrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.admrow b{flex:1;min-width:6em}
 .admgift{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.admgift input{width:7em}
 .badge{background:#C0392B;color:#fff;border-radius:999px;padding:0 8px;font-size:.8rem}
+.bragrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
+.btn.kakao{background:#FEE500;color:#191919;border-color:#FEE500}
+.rankmodal{position:fixed;inset:0;z-index:60;background:rgba(10,18,24,.6);display:flex;align-items:flex-end;justify-content:center;padding:max(10px,env(safe-area-inset-top,0px)) 10px 0}
+.rkcard{background:var(--surface,#fff);color:var(--ink,#1b2a33);width:100%;max-width:520px;max-height:88dvh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 14px max(16px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+.rkhead{display:flex;justify-content:space-between;align-items:center}.rkhead h2{margin:0}
+.rkchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.rkchips::-webkit-scrollbar{display:none}
+.rkchips button{flex:none;border:1.5px solid var(--line,#ccc);background:var(--surface,#fff);color:inherit;border-radius:999px;padding:6px 12px;font-size:.85rem;cursor:pointer}
+.rkchips button[aria-pressed="true"]{background:#1E3440;color:#fff;border-color:#1E3440}
+.rklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.rklist li{display:grid;grid-template-columns:2.4em minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--line,#ddd) 35%,transparent)}
+.rklist li.me{background:color-mix(in srgb,#FFD34D 45%,transparent);font-weight:700}
+.rkp{text-align:center;font-family:var(--display,inherit);font-size:1.1rem}
+.rklist b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.rks{font-family:var(--display,inherit);font-variant-numeric:tabular-nums}.rkt{font-size:.75rem;opacity:.65}
+.rkme{margin:0;text-align:center;font-weight:700}
+.mgrank{flex:none;white-space:nowrap}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{

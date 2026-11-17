@@ -263,9 +263,9 @@ function renderQuiz(){
     el.innerHTML=`<div class="end"><h2>${quiz.score===tot?"모두 맞혔어요! 드래곤 라이더 합격!":quiz.stopped?"여기까지 풀었어요":"끝까지 다 풀었어요"}</h2>
       <p style="margin:0"><span class="big">${quiz.score}</span> / ${tot} 정답</p>
       ${quiz.stopped?`<p class="note" style="margin:0">전체 ${quiz.stopped}문제 중 ${tot}문제를 풀고 멈췄어요.</p>`:""}
-      <div class="row"><button class="btn" id="again">처음부터 다시</button>
+      <div class="row"><button class="btn" id="again">처음부터 다시</button><button class="btn kakao" id="qBrag">자랑하기</button>
       ${quiz.wrong.length?`<button class="btn ghost" id="retry">틀린 ${quiz.wrong.length}문제만 다시</button>`:""}</div></div>`;
-    $("#again").onclick=()=>startQuiz();
+    $("#again").onclick=()=>startQuiz(); { const qb=$("#qBrag"); if(qb) qb.onclick=()=>shareCard({game:"드래곤 이름 퀴즈",big:`${quiz.score} / ${quiz.deck.length} 정답`}); }
     if(quiz.wrong.length) $("#retry").onclick=()=>startQuiz(photos.filter(p=>quiz.wrong.includes(p.id)));
     return;
   }
@@ -438,9 +438,9 @@ function renderCup(){
       <div class="crown"><img src="${urlOf(w.p)}" alt="${esc(koOf(w.sid))}"></div>
       <p style="margin:0"><span class="big" style="font-size:2.2rem">${esc(koOf(w.sid))}</span><br><span class="en">${esc(enOf(w.sid))}</span></p>
       <p class="note">준우승: ${esc(koOf(s2.sid))}</p>
-      <div class="row"><button class="btn" id="cupAgain">한 번 더</button><button class="btn ghost" id="cupHome">대진 고르기</button></div>
+      <div class="row"><button class="btn" id="cupAgain">한 번 더</button><button class="btn ghost" id="cupHome">대진 고르기</button><button class="btn kakao" id="cupBrag">자랑하기</button></div>
       ${hallHTML()}</div>`;
-    $("#cupAgain").onclick=()=>startCup(cup.size);
+    $("#cupAgain").onclick=()=>startCup(cup.size); { const cb=$("#cupBrag"); if(cb) cb.onclick=()=>shareCard({game:"내 드래곤 월드컵 우승",big:koOf(cup.champ.sid),photo:urlOf(cup.champ.p)}); }
     $("#cupHome").onclick=()=>{cup.round=null; cup.champ=null; renderCup(); updateTop();};
     return;
   }
@@ -1904,7 +1904,7 @@ function skHud(){ const n=$("#skNext"); if(n&&G){ const c=n.getContext("2d"); c.
   const b=$("#skBest"); if(b) b.textContent=fmt(sk.best||0); }
 function skOver(nb){ const o=$("#skOver"); if(!o) return; o.hidden=false;
   o.innerHTML=`<div class="skocard"><h3>${nb?"최고 기록!":"게임 끝"}</h3><p class="skobig">${fmt(G.score)}점</p><p class="note" style="color:inherit;opacity:.8">최고 ${fmt(sk.best||0)}점</p><button class="btn" id="skAgain">다시 하기</button></div>`;
-  $("#skAgain").onclick=()=>{ G=skNewGame(); o.hidden=true; skHud(); skRenderItems(); }; }
+  brag("skOver","suika",G.score); $("#skAgain").onclick=()=>{ G=skNewGame(); o.hidden=true; skHud(); skRenderItems(); }; }
 function renderSuika(){
   const el=$("#clickView"); if(!el) return;
   el.innerHTML=mgTabsHtml()+(window.Matter?`<div class="skwrap" id="skWrap">
@@ -1966,8 +1966,8 @@ async function skUpload(files,slot){
   }
   if(n) toast(`사진 ${n}장 넣었어요`);
 }
-function mgTabsHtml(){ return `<div class="mgbar"><div class="mgtabs" role="tablist"><button role="tab" data-mg="click" aria-selected="${mgMode==="click"}">클릭커</button><button role="tab" data-mg="suika" aria-selected="${mgMode==="suika"}">수박게임</button><button role="tab" data-mg="fly" aria-selected="${mgMode==="fly"}">비행</button><button role="tab" data-mg="hide" aria-selected="${mgMode==="hide"}">숨바꼭질</button><button role="tab" data-mg="mem" aria-selected="${mgMode==="mem"}">짝맞추기</button><button role="tab" data-mg="sling" aria-selected="${mgMode==="sling"}">불뿜기</button><button role="tab" data-mg="run" aria-selected="${mgMode==="run"}">달리기</button><button role="tab" data-mg="stack" aria-selected="${mgMode==="stack"}">탑쌓기</button><button role="tab" data-mg="simon" aria-selected="${mgMode==="simon"}">순서기억</button><button role="tab" data-mg="egg" aria-selected="${mgMode==="egg"}">알 받기</button><button role="tab" data-mg="dodge" aria-selected="${mgMode==="dodge"}">불꽃피하기</button><button role="tab" data-mg="berk" aria-selected="${mgMode==="berk"}">버크 만들기</button></div><button class="btn ghost small mgfsbtn" data-mgfull aria-pressed="${mgFull}">${mgFull?"닫기":"전체화면"}</button></div>`; }
-function bindMgTabs(){ const on=document.querySelector('.mgtabs [aria-selected="true"]'); if(on){ const bar=on.parentElement; bar.scrollLeft=on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2; } document.querySelectorAll("[data-mgfull]").forEach(b=>b.onclick=()=>mgSetFull(!mgFull)); document.querySelectorAll("[data-mg]").forEach(b=>b.onclick=()=>{ if(mgMode===b.dataset.mg) return; mgMode=b.dataset.mg; try{ localStorage.setItem("httyd-mgMode",mgMode); }catch(e){} renderClick(true); }); }
+function mgTabsHtml(){ return `<div class="mgbar"><div class="mgtabs" role="tablist"><button role="tab" data-mg="click" aria-selected="${mgMode==="click"}">클릭커</button><button role="tab" data-mg="suika" aria-selected="${mgMode==="suika"}">수박게임</button><button role="tab" data-mg="fly" aria-selected="${mgMode==="fly"}">비행</button><button role="tab" data-mg="hide" aria-selected="${mgMode==="hide"}">숨바꼭질</button><button role="tab" data-mg="mem" aria-selected="${mgMode==="mem"}">짝맞추기</button><button role="tab" data-mg="sling" aria-selected="${mgMode==="sling"}">불뿜기</button><button role="tab" data-mg="run" aria-selected="${mgMode==="run"}">달리기</button><button role="tab" data-mg="stack" aria-selected="${mgMode==="stack"}">탑쌓기</button><button role="tab" data-mg="simon" aria-selected="${mgMode==="simon"}">순서기억</button><button role="tab" data-mg="egg" aria-selected="${mgMode==="egg"}">알 받기</button><button role="tab" data-mg="dodge" aria-selected="${mgMode==="dodge"}">불꽃피하기</button><button role="tab" data-mg="berk" aria-selected="${mgMode==="berk"}">버크 만들기</button></div><button class="btn ghost small mgrank" data-mgrank>랭킹</button><button class="btn ghost small mgfsbtn" data-mgfull aria-pressed="${mgFull}">${mgFull?"닫기":"전체화면"}</button></div>`; }
+function bindMgTabs(){ document.querySelectorAll("[data-mgrank]").forEach(b=>b.onclick=()=>openRank({suika:"suika",fly:"fly",hide:"hide",mem:"mem_"+(M&&M.lv||"easy"),sling:"sling",run:"run",stack:"stack",simon:"simon",egg:"egg",dodge:"dodge"}[mgMode]||"suika")); const on=document.querySelector('.mgtabs [aria-selected="true"]'); if(on){ const bar=on.parentElement; bar.scrollLeft=on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2; } document.querySelectorAll("[data-mgfull]").forEach(b=>b.onclick=()=>mgSetFull(!mgFull)); document.querySelectorAll("[data-mg]").forEach(b=>b.onclick=()=>{ if(mgMode===b.dataset.mg) return; mgMode=b.dataset.mg; try{ localStorage.setItem("httyd-mgMode",mgMode); }catch(e){} renderClick(true); }); }
 
 // ---------- 미니게임: 드래곤 비행 · 드래곤 숨바꼭질 ----------
 let mini={flyBest:0,hideBest:0};
@@ -2006,7 +2006,7 @@ function flyEnd(){
   o.innerHTML=`<div class="skocard"><h3>${nb?"최고 기록!":"쿵!"}</h3><p class="skobig">${F.score}개 통과</p>
     <p style="margin:0">${FISH_SVG} 물고기 ${fmt(fish)}마리 받았어요</p><p class="note" style="color:inherit;opacity:.75;margin:0">최고 ${mini.flyBest||0}개</p>
     <button class="btn" id="flyAgain">다시 날기</button></div>`;
-  $("#flyAgain").onclick=e=>{ e.stopPropagation(); F=flyNew(); o.hidden=true; flyHud(); };
+  brag("flyOver","fly",F.score); $("#flyAgain").onclick=e=>{ e.stopPropagation(); F=flyNew(); o.hidden=true; flyHud(); };
   flyHud();
 }
 function flyHud(){ const a=$("#flyScore"); if(a&&F) a.textContent=F.score; const b=$("#flyBest"); if(b) b.textContent=mini.flyBest||0; const c=$("#flyFish"); if(c&&F) c.textContent=F.caught; }
@@ -2127,7 +2127,7 @@ function hdEnd(){
   o.innerHTML=`<div class="skocard"><h3>${nb?"최고 기록!":"시간 끝!"}</h3><p class="skobig">${H.score}점</p>
     <p style="margin:0">드래곤 ${H.hits}마리 · 바이킹 ${H.miss}번</p><p style="margin:0">${FISH_SVG} 물고기 ${fmt(fish)}마리 받았어요</p>
     <button class="btn" id="hdAgain">한 번 더</button></div>`;
-  $("#hdAgain").onclick=hdStart; const b=$("#hdBest"); if(b) b.textContent=mini.hideBest||0;
+  brag("hdOver","hide",H.score); $("#hdAgain").onclick=hdStart; const b=$("#hdBest"); if(b) b.textContent=mini.hideBest||0;
 }
 function renderHideBoard(){ const w=$("#hdGrid"); if(!w) return;
   w.innerHTML=Array.from({length:HD_N},(_,i)=>`<button class="hdhole" data-hd="${i}" aria-label="${i+1}번 집"><span class="hdroof"></span><span class="hdwin"><span class="hdpop"></span></span></button>`).join("");
@@ -2184,7 +2184,7 @@ function memEnd(){
   o.innerHTML=`<div class="skocard"><h3>${nb?"최고 기록!":"다 찾았어요!"}</h3><p class="skobig">${M.moves}번</p>
     <p style="margin:0">${sec}초 걸렸어요 · 최고 ${mini.memBest[M.lv]}번</p><p style="margin:0">${FISH_SVG} 물고기 ${fmt(fish)}마리 받았어요</p>
     <button class="btn" id="memAgain">한 판 더</button></div>`;
-  $("#memAgain").onclick=memStart;
+  brag("memOver","mem_"+M.lv,M.moves); $("#memAgain").onclick=memStart;
 }
 function memHud(){ const a=$("#memMoves"); if(a) a.textContent=M.moves||0; const b=$("#memFound"); if(b) b.textContent=`${M.found||0}/${MEM_LV[M.lv].pairs}`; }
 function memFace(c){ return c.url?`<img src="${c.url}" alt="" draggable="false">${c.name?`<span class="memname">${esc(c.name)}</span>`:""}`:`<span class="memnum" style="background:${c.col}">${c.num}</span>`; }
@@ -2228,7 +2228,7 @@ function mgCtx(cv){ const c=cv.getContext("2d"), d=cv.width/GW; c.setTransform(d
 function mgPt(cv,e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*GW,y:(e.clientY-r.top)/r.height*GH}; }
 function mgOver(key,title,big,lines,again){ const o=$("#"+key+"Over"); if(!o) return; o.hidden=false;
   o.innerHTML=`<div class="skocard"><h3>${title}</h3><p class="skobig">${big}</p>${lines.map(l=>`<p style="margin:0">${l}</p>`).join("")}<button class="btn" id="${key}Again">한 판 더</button></div>`;
-  $("#"+key+"Again").onclick=e=>{ e.stopPropagation(); o.hidden=true; again(); }; }
+  $("#"+key+"Again").onclick=e=>{ e.stopPropagation(); o.hidden=true; again(); }; if(MG_KEY2GAME[key]) brag(key+"Over",MG_KEY2GAME[key],MG_SCORE[key]()); }
 function mgSet(id,v){ const e=$("#"+id); if(e) e.textContent=v; }
 function mgSky(ctx,top,bottom){ const g=ctx.createLinearGradient(0,0,0,GH); g.addColorStop(0,top); g.addColorStop(1,bottom); ctx.fillStyle=g; ctx.fillRect(0,0,GW,GH); }
 function mgTapText(ctx,txt,y){ ctx.fillStyle="rgba(20,32,40,.62)"; ctx.beginPath(); ctx.roundRect(60,y,300,60,16); ctx.fill();
@@ -2648,6 +2648,7 @@ function admPaint(){ const box=$("#adminPanel"); if(!box) return;
   box.innerHTML=`<h2>관리자</h2>
     <div class="admsec"><h3>승인 요청 <span id="admReqN"></span></h3><div id="admReqs"></div></div>
     <div class="admsec"><h3 id="admMemH">멤버</h3><div id="admMems"></div></div>
+    <div class="admsec"><h3>랭킹에 보일 내 이름</h3><div class="admrow"><input id="agName" maxlength="20" autocomplete="off" style="flex:1;min-width:8em;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line)"><button class="btn small" id="agNameGo">저장</button></div></div>
     <div class="admsec"><h3>선물 주기</h3>
       <div class="admgift"><label class="fxf"><span>누구에게</span><select id="agWho"></select></label>
         <label class="fxf"><span>보석</span><input id="agGems" type="number" inputmode="numeric" min="0" value="0"></label>
@@ -2663,7 +2664,8 @@ function admPaint(){ const box=$("#adminPanel"); if(!box) return;
   $("#agImp").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; const m=$("#agImpMsg");
     try{ const txt=await f.text(); const n=await FB.admin.importData(txt,(i,t)=>{ m.textContent=` 옮기는 중… ${i}/${t}`; }); m.textContent=` 다 옮겼어요 (${n}개). 다시 여는 중…`; setTimeout(()=>location.reload(),1500); }
     catch(err){ m.textContent=" "+(err&&err.message||"가져오지 못했어요"); } };
-  $("#agOut").onclick=()=>FB.signOut(); }
+  $("#agOut").onclick=()=>FB.signOut();
+  $("#agName").value=FB.name||""; $("#agNameGo").onclick=async()=>{ try{ await FB.admin.setName($("#agName").value); toast("이름을 저장했어요. 다음 기록부터 이 이름으로 올라가요"); }catch(e){ toast("저장하지 못했어요"); } }; }
   $("#admReqN").innerHTML=adm.reqs.length?`<span class="badge">${adm.reqs.length}</span>`:"";
   $("#admReqs").innerHTML=adm.reqs.length?adm.reqs.map(r=>`<div class="admrow"><b>${esc(r.name||"이름 없음")}</b><span class="note">${new Date(r.at||0).toLocaleString("ko-KR")}</span>
         <button class="btn small" data-aok="${esc(r.uid)}">승인</button><button class="btn ghost small" data-ano="${esc(r.uid)}">거절</button></div>`).join(""):`<p class="note" style="margin:0">새 요청이 없어요.</p>`;
@@ -2811,6 +2813,81 @@ document.addEventListener("change",async e=>{
   let resume=false; try{ resume=localStorage.getItem("httyd-auto")==="1"; }catch(e){}
   if(resume){ const t0=Date.now(); while(cloud&&!purseReady&&Date.now()-t0<8000) await sleep(200); if(gems>=COST){ toast("자동 뽑기를 이어서 해요"); autoLoop(); } else setAutoFlag(false); }
 })();
+
+// ---------- 자랑하기(공유)와 랭킹 ----------
+const RANK_GAMES={
+  suika:{name:"수박게임",unit:"점"}, fly:{name:"비행",unit:"개 통과"}, hide:{name:"숨바꼭질",unit:"점"},
+  mem_easy:{name:"짝맞추기 쉬움",unit:"번",low:true}, mem_normal:{name:"짝맞추기 보통",unit:"번",low:true}, mem_hard:{name:"짝맞추기 어려움",unit:"번",low:true},
+  sling:{name:"불뿜기",unit:"점"}, run:{name:"달리기",unit:"m"}, stack:{name:"탑쌓기",unit:"층"},
+  simon:{name:"순서기억",unit:"개"}, egg:{name:"알 받기",unit:"점"}, dodge:{name:"불꽃피하기",unit:"초"}};
+const MG_KEY2GAME={run:"run",stack:"stack",sling:"sling",sm:"simon",egg:"egg",dodge:"dodge"};
+const MG_SCORE={run:()=>Math.floor(R.dist/20),stack:()=>T.blocks.length-1,sling:()=>S.score,sm:()=>SM.round,egg:()=>E.score,dodge:()=>Math.floor(D.time/60)};
+const fmtScore=(g,v)=>`${fmt(v)}${RANK_GAMES[g].unit}`;
+// 게임이 끝나면: 랭킹에 기록하고, 결과 창에 '자랑하기'와 '랭킹 보기' 버튼을 붙여요
+function brag(overId,game,score){
+  const card=document.querySelector("#"+overId+" .skocard"); if(!card) return;
+  const row=document.createElement("div"); row.className="bragrow";
+  row.innerHTML=`<button class="btn small kakao" data-brag>자랑하기</button><button class="btn ghost small" data-rk>랭킹 보기</button><p class="note bragrank" style="margin:0;flex:1 1 100%"></p>`;
+  card.appendChild(row);
+  const info=row.querySelector(".bragrank");
+  let place=null;
+  FB.rank.submit(game,score).then(r=>{ if(!r) return; place=r.place; info.textContent=r.improved?`랭킹 ${r.place}등에 올랐어요! (${r.total}명 중)`:`내 최고 기록은 랭킹 ${r.place}등이에요 (${r.total}명 중)`; }).catch(()=>{});
+  row.querySelector("[data-brag]").onclick=e=>{ e.stopPropagation(); shareCard({game:RANK_GAMES[game].name,big:fmtScore(game,score),place}); };
+  row.querySelector("[data-rk]").onclick=e=>{ e.stopPropagation(); openRank(game); };
+}
+// 공유용 카드 그림을 만들어서 카카오톡 등으로 보내요 (휴대폰 공유 창)
+async function cardImage(o){
+  const W=720,H=720,c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
+  const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#1E3440"); g.addColorStop(1,"#2E6F8E"); x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.fillStyle="rgba(255,255,255,.08)"; for(let i=0;i<30;i++){ x.beginPath(); x.arc((i*137)%W,(i*251)%H,2+i%4,0,Math.PI*2); x.fill(); }
+  x.fillStyle="#FFD34D"; x.font="bold 34px sans-serif"; x.textAlign="center"; x.fillText("버크 드래곤 도감",W/2,70);
+  const url=o.photo||(ckTarget()&&ckTarget().url);
+  if(url){ await new Promise(ok=>{ const im=new Image(); im.onload=()=>{ x.save(); x.beginPath(); x.arc(W/2,250,120,0,Math.PI*2); x.clip();
+      const s=Math.max(240/im.width,240/im.height); x.drawImage(im,W/2-im.width*s/2,250-im.height*s/2,im.width*s,im.height*s); x.restore();
+      x.lineWidth=8; x.strokeStyle="#FFD34D"; x.beginPath(); x.arc(W/2,250,120,0,Math.PI*2); x.stroke(); ok(); }; im.onerror=ok; im.src=url; }); }
+  x.fillStyle="#fff"; x.font="bold 40px sans-serif"; x.fillText(o.game,W/2,440);
+  let fs=92; x.font=`bold ${fs}px sans-serif`; while(x.measureText(o.big).width>W-60&&fs>30){ fs-=4; x.font=`bold ${fs}px sans-serif`; }
+  x.fillStyle="#FFF4D6"; x.fillText(o.big,W/2,545);
+  if(o.place){ x.font="bold 36px sans-serif"; x.fillStyle="#FFD34D"; x.fillText(`랭킹 ${o.place}등`,W/2,605); }
+  x.font="28px sans-serif"; x.fillStyle="rgba(255,255,255,.85)"; x.fillText(`${FB.name||""} · 같이 하자!`,W/2,670);
+  return new Promise(ok=>c.toBlob(ok,"image/png"));
+}
+async function shareCard(o){
+  const link=location.origin+location.pathname;
+  const text=`[버크 드래곤 도감] ${FB.name?FB.name+"의 ":""}${o.game} ${o.big}${o.place?` (랭킹 ${o.place}등)`:""}! 나랑 대결해 볼래?`;
+  try{
+    const blob=await cardImage(o); const file=blob&&new File([blob],"berk-dragon.png",{type:"image/png"});
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:text+"\n"+link,title:"버크 드래곤 도감"}); return; }
+    if(navigator.share){ await navigator.share({text,url:link,title:"버크 드래곤 도감"}); return; }
+  }catch(e){ if(e&&e.name==="AbortError") return; }
+  try{ await navigator.clipboard.writeText(text+"\n"+link); toast("자랑 글을 복사했어요. 카카오톡 대화방에 붙여 넣어 주세요"); }
+  catch(e){ toast("이 기기에서는 공유를 할 수 없어요"); }
+}
+// 랭킹 창
+let rkGame="suika";
+async function openRank(game){
+  if(game) rkGame=game;
+  let m=$("#rankModal"); if(!m){ m=document.createElement("div"); m.id="rankModal"; m.className="rankmodal"; document.body.appendChild(m); }
+  m.hidden=false; document.body.classList.add("skfull");
+  const paint=(list,err)=>{ const G=RANK_GAMES[rkGame]; const me=list&&list.find(r=>r.me);
+    m.innerHTML=`<div class="rkcard" role="dialog" aria-label="랭킹">
+      <div class="rkhead"><h2>랭킹</h2><button class="btn ghost small" id="rkClose">닫기</button></div>
+      <div class="rkchips">${Object.entries(RANK_GAMES).map(([k,v])=>`<button data-rkg="${k}" aria-pressed="${k===rkGame}">${v.name}</button>`).join("")}</div>
+      <p class="note" style="margin:0">${G.low?"적게 뒤집을수록":"점수가 높을수록"} 위예요. 같은 기록이면 먼저 세운 사람이 위예요.</p>
+      <ol class="rklist">${list?list.slice(0,30).map(r=>`<li class="${r.me?"me":""}"><span class="rkp">${r.place<=3?["🥇","🥈","🥉"][r.place-1]:r.place}</span><b>${esc(r.name||"이름 없음")}${r.me?" (나)":""}</b><span class="rks">${fmtScore(rkGame,r.score)}</span><span class="rkt">${r.at?r.at.toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"}):""}</span></li>`).join("")||`<p class="note">아직 기록이 없어요. 첫 번째 주인공이 되어 보세요!</p>`:`<p class="note">${err?"랭킹을 불러오지 못했어요.":"불러오는 중…"}</p>`}</ol>
+      ${me&&me.place>30?`<p class="rkme">내 순위: ${me.place}등 · ${fmtScore(rkGame,me.score)}</p>`:""}</div>`;
+    $("#rkClose").onclick=()=>{ m.hidden=true; if(!mgFull) document.body.classList.remove("skfull"); };
+    m.onclick=e=>{ if(e.target===m) $("#rkClose").click(); };
+    m.querySelectorAll("[data-rkg]").forEach(b=>b.onclick=()=>openRank(b.dataset.rkg));
+    const on=m.querySelector('[data-rkg][aria-pressed="true"]'); if(on) on.scrollIntoView({inline:"center",block:"nearest"});
+  };
+  paint(null); try{ paint(await FB.rank.list(rkGame)); }catch(e){ paint(null,true); }
+}
+
+// 이전에 세운 내 최고 기록도 랭킹에 올려요 (앱을 열 때 한 번, 더 좋은 기록일 때만)
+setTimeout(()=>{ if(!cloud) return; const mb=mini.memBest||{};
+  [["suika",sk.best],["fly",mini.flyBest],["hide",mini.hideBest],["mem_easy",mb.easy],["mem_normal",mb.normal],["mem_hard",mb.hard],["sling",mini.slingBest],["run",mini.runBest],["stack",mini.stackBest],["simon",mini.simonBest],["egg",mini.eggBest],["dodge",mini.dodgeBest]]
+    .forEach(([g,v])=>{ if(v) FB.rank.seed(g,v).catch(()=>{}); }); },8000);
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
 
