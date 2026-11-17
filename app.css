@@ -154,6 +154,44 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .raidinfo b{font-family:var(--display);font-size:1.5rem}.raidinfo span{font-size:.8rem;opacity:.85}
 .raidhp{height:22px}.raidhp .hpf{background:linear-gradient(90deg,#C0392B,#E4572E)}
 .raidlast{margin:0;text-align:center;font-weight:700;color:#E4572E}
+/* 다크 모드: 밝은 판들도 처음부터 어둡게 칠해 둠 → 브라우저가 억지로 칠할 게 없어서 번쩍임이 줄어듦 */
+.plus{will-change:transform,opacity;contain:layout paint}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .skbox{background:linear-gradient(#0B1E2C,#0A1822 50%,#14240F)}
+  :root:not([data-theme="light"]) .flybox{background:#0E2233}
+  :root:not([data-theme="light"]) .hdbox{background:linear-gradient(#10283A 0,#173826 45%,#0F2A18 100%)}
+  :root:not([data-theme="light"]) .membox{background:linear-gradient(#10283A,#132B20)}
+  :root:not([data-theme="light"]) .tmstage{background:radial-gradient(circle at 50% 35%,#3A2E22,#2A2018 60%,#1E1712)}
+  :root:not([data-theme="light"]) .bkt.land{background:#3F5E35;box-shadow:inset 0 -4px 0 #2E4627}
+  :root:not([data-theme="light"]) .bkt.land.coast{background:#5A6A3C;box-shadow:inset 0 -4px 0 #44502C}
+  :root:not([data-theme="light"]) .bkmap.season-winter .bkt.land{background:#55636B;box-shadow:inset 0 -4px 0 #3F4A50}
+  :root:not([data-theme="light"]) .bkmap.season-winter .bkt.land.coast{background:#4C5960}
+  :root:not([data-theme="light"]) .bkmap.season-autumn .bkt.land{background:#6B4A2A;box-shadow:inset 0 -4px 0 #4E351E}
+  :root:not([data-theme="light"]) .bkmap.season-spring .bkt.land{background:#4A6A3A;box-shadow:inset 0 -4px 0 #36502A}
+  :root:not([data-theme="light"]) .ckbg .sk1{stop-color:#1B2E45}
+  :root:not([data-theme="light"]) .ckbg .sk2{stop-color:#3B4A5C}
+  :root:not([data-theme="light"]) .evcard.bday{background:linear-gradient(180deg,#3A3018,var(--surface) 40%)}
+  :root:not([data-theme="light"]) .bankrow.ripe,:root:not([data-theme="light"]) .sprow.open{background:color-mix(in srgb,#9BC53D 18%,var(--surface))}
+}
+:root[data-theme="dark"] .skbox{background:linear-gradient(#0B1E2C,#0A1822 50%,#14240F)}
+:root[data-theme="dark"] .flybox{background:#0E2233}
+:root[data-theme="dark"] .hdbox{background:linear-gradient(#10283A 0,#173826 45%,#0F2A18 100%)}
+:root[data-theme="dark"] .membox{background:linear-gradient(#10283A,#132B20)}
+:root[data-theme="dark"] .tmstage{background:radial-gradient(circle at 50% 35%,#3A2E22,#2A2018 60%,#1E1712)}
+:root[data-theme="dark"] .bkt.land{background:#3F5E35;box-shadow:inset 0 -4px 0 #2E4627}
+:root[data-theme="dark"] .bkt.land.coast{background:#5A6A3C;box-shadow:inset 0 -4px 0 #44502C}
+:root[data-theme="dark"] .bkmap.season-winter .bkt.land{background:#55636B;box-shadow:inset 0 -4px 0 #3F4A50}
+:root[data-theme="dark"] .bkmap.season-winter .bkt.land.coast{background:#4C5960}
+:root[data-theme="dark"] .bkmap.season-autumn .bkt.land{background:#6B4A2A;box-shadow:inset 0 -4px 0 #4E351E}
+:root[data-theme="dark"] .bkmap.season-spring .bkt.land{background:#4A6A3A;box-shadow:inset 0 -4px 0 #36502A}
+:root[data-theme="dark"] .ckbg .sk1{stop-color:#1B2E45}
+:root[data-theme="dark"] .ckbg .sk2{stop-color:#3B4A5C}
+:root[data-theme="dark"] .evcard.bday{background:linear-gradient(180deg,#3A3018,var(--surface) 40%)}
+:root[data-theme="dark"] .bankrow.ripe,:root[data-theme="dark"] .sprow.open{background:color-mix(in srgb,#9BC53D 18%,var(--surface))}
+.samtip{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-start;background:var(--surface);border:2px solid #3FA7D6;border-radius:14px;padding:10px 12px;font-size:.85rem;line-height:1.5}
+.samtip>div{flex:1 1 220px;min-width:0}.samtip b{display:block}.samtip .samb{display:flex;gap:6px;flex-wrap:wrap}
+.throw{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.throw button[aria-pressed="true"]{background:var(--ember);color:var(--ember-ink);border-color:var(--ember)}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{

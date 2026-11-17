@@ -130,7 +130,7 @@
     if(started){ location.reload(); return; }
     // 같은 기기에서 다른 사람이 로그인하면, 앞사람의 게임 기록이 섞이지 않게 이 기기 저장분을 비우고 다시 열어요
     try{ const last=localStorage.getItem("berk-uid");
-      if(last!==user.uid){ const keep=k=>k.startsWith("__mock"); Object.keys(localStorage).filter(k=>!keep(k)).forEach(k=>localStorage.removeItem(k));
+      if(last!==user.uid){ const keep=k=>k.startsWith("__mock")||k==="berk-theme"||k==="berk-samtip"; Object.keys(localStorage).filter(k=>!keep(k)).forEach(k=>localStorage.removeItem(k));
         localStorage.setItem("berk-uid",user.uid); if(localStorage.getItem("berk-uid")===user.uid){ location.reload(); return; } } }catch(e){}
     started=true; document.body.classList.toggle("is-owner",isOwner);
     gate(`<h1>버크 드래곤 도감</h1><p id="gProg">사진 불러오는 중…</p>`);

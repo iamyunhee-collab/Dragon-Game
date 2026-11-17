@@ -2997,6 +2997,14 @@ function pvpResult(el){ const d=bt.done, nm=esc(bt.pvp.name);
   $("#pvpOut").onclick=()=>{ bt=null; bv.sub="pvp"; arenaList=null; renderBattle(); };
 }
 
+/* 화면 색: auto(휴대폰 따라) / light / dark — data-theme 으로 고정 */
+function berkTheme(set){
+  if(set){ try{ localStorage.setItem("berk-theme",set); }catch(e){} }
+  let t="auto"; try{ t=localStorage.getItem("berk-theme")||"auto"; }catch(e){}
+  if(t==="auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme",t);
+  return t;
+}
+berkTheme();
 // ---------- 홈: 접속하면 처음 보이는 화면. 큰 아이콘으로 고르고, 기능마다 자세한 설명을 볼 수 있어요 ----------
 const HOME_SECTIONS=[
  {title:"이벤트",items:[
@@ -3186,7 +3194,9 @@ function goMini(k){ mgMode=k; try{ localStorage.setItem("httyd-mg",k); }catch(e)
 function renderHome(){
   const el=$("#homeView"); if(!el) return;
   const fish=typeof ck!=="undefined"?ck.fish||0:0;
-  el.innerHTML=`<div class="home">
+  const sam=/SamsungBrowser/i.test(navigator.userAgent), th=berkTheme();
+  let tipOff=false; try{ tipOff=localStorage.getItem("berk-samtip")==="off"; }catch(e){}
+  el.innerHTML=`<div class="home">${sam&&!tipOff&&th!=="dark"?`<div class="samtip"><div><b>휴대폰이 다크 모드인데 화면이 파랗게 번쩍이나요?</b>삼성 인터넷이 밝은 화면을 억지로 어둡게 칠하다가 생기는 일이에요. 아래 <b style="display:inline">'어두운 화면 켜기'</b>를 누르면 앱이 처음부터 어둡게 그려서 번쩍임이 사라져요. (또는 삼성 인터넷 ☰ → 설정 → 실험실 → '웹사이트 다크 테마 사용' 켜기)</div><div class="samb"><button class="btn small" id="samTipDark">어두운 화면 켜기</button><button class="btn ghost small" id="samTipX">닫기</button></div></div>`:""}
     <div class="hhello"><h1>${FB.name&&FB.name!=="관리자"?esc(FB.name)+"님, ":""}오늘은 뭐 할까?</h1>
       <div class="hstats"><span><svg class="gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z" fill="var(--gem)"/></svg>보석 <b>${fmt(gems)}</b></span><span>${COIN_SVG}코인 <b>${fmt(coins)}</b></span><span>${FISH_SVG}물고기 <b>${fmt(fish)}</b></span></div></div>
     ${HOME_SECTIONS.map(sec=>{ const items=sec.items.filter(it=>!it.owner||FB.isOwner); if(!items.length) return "";
@@ -3194,7 +3204,11 @@ function renderHome(){
         <button class="hgo" data-hgo="${it.id}"><span class="hico" aria-hidden="true">${it.ico}</span><b>${it.name}</b><span class="hsum">${it.sum}</span></button>
         <details class="hdet"><summary>자세히 보기</summary>${it.det}</details></div>`).join("")}</div></section>`; }).join("")}
     <p class="note" style="text-align:center">생일에 접속하면 축하 선물을 고를 수 있어요 🎂 (생일은 관리자가 넣어 줘요)</p>
+    <div class="throw">화면 색 ${[["auto","자동"],["light","밝게"],["dark","어둡게"]].map(([k,t])=>`<button class="btn ghost small" data-th="${k}" aria-pressed="${th===k}">${t}</button>`).join("")}</div>
     <p class="note" style="text-align:center">아래 탭이나 각 화면에서 언제든 <b>홈</b>으로 돌아올 수 있어요.</p></div>`;
+  el.querySelectorAll("[data-th]").forEach(b=>b.onclick=()=>{ berkTheme(b.dataset.th); renderHome(); });
+  const sd=$("#samTipDark"); if(sd) sd.onclick=()=>{ berkTheme("dark"); renderHome(); };
+  const st=$("#samTipX"); if(st) st.onclick=()=>{ try{ localStorage.setItem("berk-samtip","off"); }catch(e){} renderHome(); };
   const all=HOME_SECTIONS.flatMap(s=>s.items);
   el.querySelectorAll("[data-hgo]").forEach(b=>b.onclick=()=>{ const it=all.find(x=>x.id===b.dataset.hgo); if(it) it.go(); });
 }
@@ -3215,8 +3229,10 @@ function evReady(path){ if(evLoaded[path]) return true; toast("기록을 불러�
 const giftText=g=>[g.gems&&`보석 ${fmt(g.gems)}개`,g.coins&&`코인 ${fmt(g.coins)}개`,g.fish&&`물고기 ${fmt(g.fish)}마리`,g.tickets&&`펫 뽑기권 ${g.tickets}장`,g.bk&&`버크 건물 '${BK_B[g.bk].name}'`].filter(Boolean).join(", ");
 // 공용 시트(아래에서 올라오는 창)
 function openSheet(html,bind,cls){ let m=$("#evSheet"); if(!m){ m=document.createElement("div"); m.id="evSheet"; m.className="rankmodal"; document.body.appendChild(m); }
+  const old=!m.hidden&&m.querySelector(".evcard"), keep=old&&old.dataset.cls===(cls||"")?old.scrollTop:0; // 같은 창을 다시 그릴 땐 보던 위치 그대로
   m.hidden=false; document.body.classList.add("skfull");
-  m.innerHTML=`<div class="rkcard evcard ${cls||""}" role="dialog">${html}</div>`;
+  m.innerHTML=`<div class="rkcard evcard ${cls||""}" data-cls="${cls||""}" role="dialog">${html}</div>`;
+  if(keep){ const c=m.querySelector(".evcard"); c.scrollTop=keep; requestAnimationFrame(()=>{ c.scrollTop=keep; }); }
   const close=()=>{ m.hidden=true; if(!(typeof mgFull!=="undefined"&&mgFull)) document.body.classList.remove("skfull"); if(view==="home") renderHome(); };
   m.onclick=e=>{ if(e.target===m) close(); }; m.querySelectorAll("[data-evclose]").forEach(b=>b.onclick=close);
   bind&&bind(m,close); return close; }
