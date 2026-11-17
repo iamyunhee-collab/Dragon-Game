@@ -189,7 +189,7 @@ async function initCloud(){
     d.doc("settings/rarity").onSnapshot(s=>{ if(s.exists){ const v=s.data()||{}; rarity=JSON.parse(JSON.stringify(v.map||{})); if(v.odds) odds=Object.assign({},ODDS0,v.odds); if(view==="fortune") renderFortune(); } },()=>{});
     d.collection("petdefs").onSnapshot(s=>{ petDefs=s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); if(view==="fortune") renderFortune(); },()=>{});
     d.collection("petphotos").onSnapshot(s=>{ petPhotos=s.docs.map(x=>({id:x.id,...x.data()})); if(view==="fortune") renderFortune(); },()=>{});
-    initBattleCloud(d); initClickCloud(d); initSuikaCloud(d); initMiniCloud(d); initBerkCloud(d); initEventsCloud(d); initG5Cloud(d);
+    initBattleCloud(d); initClickCloud(d); initSuikaCloud(d); initMiniCloud(d); initBerkCloud(d); initEventsCloud(d); initG5Cloud(d); initG6Cloud(d);
     await initPurse(d);
     initTally(d);
     d.doc("settings/extras").onSnapshot(s=>{ if(s.exists){ extras=JSON.parse(JSON.stringify((s.data()||{}).map||{})); rerender(); } },()=>{});
@@ -1496,7 +1496,7 @@ function renderFight(el){
     bt.auto=false; bv.autoOn=false; if(bt.busy){ bt.quitPending=true; const b=q("bQuit"); if(b) b.textContent="그만두는 중…"; } else { bt=null; renderBattle(); toast("전투를 그만뒀어요"); } };
   if(q("bAuto")) q("bAuto").onclick=()=>{ bt.auto=!bt.auto; bv.autoOn=bt.auto; renderBattle(); if(bt.auto) autoStep(); };
 }
-function bsubBar(){ return `<div class="chips" role="group" aria-label="전투 화면">${[["adv","모험"],["pvp","친구 대결"],["cards","카드와 팀"],["set","전투 설정"]].filter(x=>x[0]!=="set"||FB.isOwner).map(([k,l])=>`<button class="chip" data-bsub="${k}" aria-pressed="${bv.sub===k}">${l}</button>`).join("")}</div>`; }
+function bsubBar(){ return `<div class="chips" role="group" aria-label="전투 화면">${[["adv","모험"],["pvp","친구 대결"],["tour","토너먼트"],["raid","레이드"],["cards","카드와 팀"],["set","전투 설정"]].filter(x=>x[0]!=="set"||FB.isOwner).map(([k,l])=>`<button class="chip" data-bsub="${k}" aria-pressed="${bv.sub===k}">${l}</button>`).join("")}</div>`; }
 function teamStrip(){
   const own=battleOwned(); const t=team.filter(id=>own.includes(id));
   return `<div class="tstrip">${[0,1,2].map(i=>{const id=t[i]; return id?`<div class="tslot">${cardPhoto(id)?`<img src="${urlOf(cardPhoto(id))}" alt="">`:""}<span>${esc(koOf(id))} Lv.${lvOf(id)}</span></div>`:`<div class="tslot empty"><span>빈 자리</span></div>`;}).join("")}</div>`;
@@ -1572,7 +1572,7 @@ function softRenderBattle(){ // 저장소에서 온 변화: 입력 중이면 화
 function renderBattle(){
   const el=$("#battleView"); if(!el) return;
   if(bt) return renderFight(el);
-  el.innerHTML=bsubBar()+(bv.sub==="cards"?cardsHTML():bv.sub==="set"?setHTML():bv.sub==="pvp"?pvpHTML():advHTML()); if(bv.sub==="pvp") pvpBind(el);
+  el.innerHTML=bsubBar()+(bv.sub==="cards"?cardsHTML():bv.sub==="set"?setHTML():bv.sub==="pvp"?pvpHTML():bv.sub==="tour"?tourHTML():bv.sub==="raid"?raidHTML():advHTML()); if(bv.sub==="pvp") pvpBind(el); if(bv.sub==="tour") tourBind(el); if(bv.sub==="raid") raidBind(el);
   el.querySelectorAll("[data-bsub]").forEach(b=>b.onclick=()=>{ bv.sub=b.dataset.bsub; renderBattle(); });
   const gt=$("#goTeam"); if(gt) gt.onclick=()=>{ bv.sub="cards"; renderBattle(); };
   el.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>startBattle(+b.dataset.st));
@@ -2930,7 +2930,7 @@ function myArenaTeam(){ const own=battleOwned(); return team.filter(id=>own.incl
 const teamPower=t=>SAFE(t.reduce((a,u)=>a+u.hp/10+u.atk,0));
 async function pvpLoad(){ if(arenaLoading) return; arenaLoading=true;
   try{ const t=myArenaTeam(); if(t.length) await FB.arena.publish(t,teamPower(t)); arenaList=await FB.arena.list(); }catch(e){ arenaList=arenaList||[]; }
-  arenaLoading=false; if(view==="battle"&&bv.sub==="pvp"&&!bt) renderBattle(); }
+  arenaLoading=false; if(view==="battle"&&(bv.sub==="pvp"||bv.sub==="tour")&&!bt) renderBattle(); }
 const pvpUnitsHTML=t=>`<div class="pvpteam">${(t||[]).filter(u=>SPECIES.some(s=>s.id===u.sid)).map(u=>{ const ph=cardPhoto(u.sid), tc=(TIER_BY[tierOf(u.sid)]||TIER_BY.common).cls;
   return `<span class="pvpu ${tc}">${ph?`<img src="${urlOf(ph)}" alt="">`:""}<i>${esc(koOf(u.sid))} Lv.${fmt(u.lv)}</i></span>`; }).join("")}</div>`;
 function pvpHTML(){
@@ -3041,6 +3041,18 @@ const HOME_SECTIONS=[
    <li>내 펫 효과도 그대로 써요. 자동 전투도 돼요.</li>
    <li>이기면 상대 전투력에 따라 <b>코인</b>을 받고, 승패 기록이 쌓여요.</li>
    <li>이긴 화면에서 <b>자랑하기</b>로 친구에게 알려 줄 수 있어요.</li></ul>`},
+  {id:"tour",ico:"🏟️",col:"#C9A227",name:"주간 토너먼트",sum:"매주 모든 팀이 자동으로 겨루기",go:()=>{ bv.sub="tour"; show("battle"); },
+   det:`<p>'친구 대결'에 등록된 팀들이 <b>매주 자동으로 토너먼트</b>를 해요. 따로 할 일은 없어요. 팀만 키워 두면 돼요!</p>
+   <ul><li>전투력 순으로 대진이 정해져요. 최대 16팀이 나가요.</li>
+   <li>이번 주 <b>예상 대진표</b>를 언제든 볼 수 있고, 매주 <b>일요일 밤 12시</b> 기준으로 결과가 확정돼요.</li>
+   <li>우승: 펫 뽑기권 2장·코인 100k·보석 1k, 준우승: 뽑기권 1장·코인 50k·보석 500, 참가만 해도 코인 10k·보석 100.</li>
+   <li>다음 주에 들어와서 <b>상품 받기</b>를 누르면 받아요.</li></ul>`},
+  {id:"raid",ico:"🐲",col:"#C0392B",name:"레이드 보스",sum:"모두 함께 거대 보스 쓰러뜨리기",go:()=>{ bv.sub="raid"; show("battle"); },
+   det:`<p>매주 월요일에 레드 데스 같은 <b>거대 보스</b>가 나타나요. 보스 체력은 <b>모든 멤버가 함께</b> 깎아요.</p>
+   <ul><li>하루에 <b>3번</b>, 내 팀으로 공격할 수 있어요. 팀이 셀수록 피해가 커요.</li>
+   <li>누가 얼마나 때렸는지 <b>기여 순위</b>가 실시간으로 보여요.</li>
+   <li>보스를 쓰러뜨리면 공격한 사람 모두 보석·코인을 받고, 기여 1~3등은 펫 뽑기권을 더 받아요.</li>
+   <li>마지막 일격을 날리면 축하 폭죽이 터져요!</li></ul>`},
   {id:"cards",ico:"🃏",col:"#5965D9",name:"카드와 팀",sum:"카드 레벨 올리고 팀·펫 정하기",go:()=>{ bv.sub="cards"; show("battle"); },
    det:`<p>뽑은 드래곤이 <b>전투 카드</b>가 돼요. 여기서 카드를 키우고 팀을 짜요.</p>
    <ul><li>같은 드래곤을 여러 번 뽑으면 레벨이 올라가요. 코인을 써서 더 올릴 수도 있어요.</li>
@@ -3492,6 +3504,109 @@ document.addEventListener("keydown",e=>{ if(view!=="click"||mgMode!=="tetris"||!
   const m={ArrowLeft:()=>ttMove(-1),ArrowRight:()=>ttMove(1),ArrowUp:ttRotate,ArrowDown:ttDown," ":ttHard}; if(m[e.key]){ e.preventDefault(); m[e.key](); } });
 
 function initG5Cloud(d){ d.doc("settings/tama").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tama"]&&!s.metadata.hasPendingWrites){ tama=Object.assign({},tama,JSON.parse(JSON.stringify(s.data()||{}))); if(view==="click"&&mgMode==="tama") renderTama(); } },()=>{}); }
+
+// ===================== 주간 토너먼트 · 레이드 보스 =====================
+function weekStart(off=0){ const d=KST(); const wd=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-wd+off*7); return d.toISOString().slice(0,10); } // 월요일
+const weekId=(off=0)=>weekStart(off);
+const weekEndText=()=>{ const e=new Date(weekStart(1)+"T00:00:00Z"); e.setUTCDate(e.getUTCDate()-1); return `${e.getUTCMonth()+1}월 ${e.getUTCDate()}일(일) 밤 12시`; };
+// 빠른 전투 계산 (화면 없이): 같은 판은 같은 결과가 나오도록 씨앗(seed) 난수
+function simTeam(t){ return (t||[]).filter(u=>SPECIES.some(s=>s.id===u.sid)).slice(0,3).map(u=>{ const c=cfgOf(u.sid), hp=Math.max(1,SAFE(u.hp)); return {sid:u.sid,hp,max:hp,atk:Math.max(1,SAFE(u.atk)),sk:c.sk,ch:0,stun:0,shield:0}; }); }
+function simAct(me,foe,r){ if(me.stun){ me.stun=0; return 0; } me.ch++; let d; const rnd=0.85+r()*0.3, crit=r()<0.1?1.5:1;
+  if(me.ch>=(me.sk.cd||3)){ me.ch=0; const t=me.sk.type, p=+me.sk.pow||1;
+    if(t==="heal"){ me.hp=Math.min(me.max,me.hp+me.max*p/100); return 0; }
+    d=me.atk*p*(t==="multi"?3:1)*rnd; if(t==="stun") foe.stun=1; if(t==="drain") me.hp=Math.min(me.max,me.hp+d*crit*0.5); if(t==="shield") me.shield=1;
+  } else d=me.atk*rnd;
+  d=Math.round(d*crit*(foe.shield?0.5:1)); foe.shield=0; foe.hp-=d; return d; }
+function simFight(A,B,r,cap){ let ai=0,bi=0,dealt=0; cap=cap||600;
+  for(let turn=0;turn<cap;turn++){ const a=A[ai], b=B[bi]; dealt+=Math.max(0,simAct(a,b,r)); if(b.hp<=0){ bi++; if(bi>=B.length) return {winA:true,dealt}; }
+    const b2=B[bi], a2=A[ai]; simAct(b2,a2,r); if(a2.hp<=0){ ai++; if(ai>=A.length) return {winA:false,dealt}; } }
+  const ra=A.reduce((s,u)=>s+Math.max(0,u.hp)/u.max,0)/A.length, rb=B.reduce((s,u)=>s+Math.max(0,u.hp)/u.max,0)/B.length; return {winA:ra>=rb,dealt}; }
+
+/* ---------- 13. 주간 토너먼트 ---------- */
+function tourRun(entries,week){ // 전투력 순으로 시드 배정, 빈자리는 부전승
+  const ps=entries.filter(e=>Array.isArray(e.team)&&e.team.length).sort((a,b)=>(b.power||0)-(a.power||0)||String(a.uid).localeCompare(String(b.uid))).slice(0,16);
+  if(ps.length<2) return null; let size=2; while(size<ps.length) size*=2;
+  const order=[0,1]; while(order.length<size){ const n=order.length*2; const nx=[]; for(const i of order){ nx.push(i,n-1-i); } order.splice(0,order.length,...nx); }
+  let cur=order.map(i=>ps[i]||null); const rounds=[];
+  for(let rd=0;cur.length>1;rd++){ const nxt=[], ms=[];
+    for(let i=0;i<cur.length;i+=2){ const a=cur[i], b=cur[i+1]; let w;
+      if(!a||!b) w=a||b; else { const res=simFight(simTeam(a.team),simTeam(b.team),seedRand(`tour|${week}|${rd}|${i}|${a.uid}|${b.uid}`)); w=res.winA?a:b; }
+      ms.push({a:a&&{uid:a.uid,name:a.name},b:b&&{uid:b.uid,name:b.name},w:w&&w.uid}); nxt.push(w); }
+    rounds.push(ms); cur=nxt; }
+  const champ=cur[0], fin=rounds[rounds.length-1][0], ru=fin.w===(fin.a&&fin.a.uid)?fin.b:fin.a;
+  return {week,size,rounds,champion:{uid:champ.uid,name:champ.name},runnerUp:ru||null,count:ps.length}; }
+let tourPrev=null, tourPrevLoaded=false, tourClaim={claimed:{}}; const saveTour=makeSaver("settings/tour",()=>tourClaim);
+const TOUR_PRIZE={1:{tickets:2,coins:100000,gems:1000},2:{tickets:1,coins:50000,gems:500},0:{coins:10000,gems:100}};
+const roundName=(i,total)=>{ const n=Math.pow(2,total-i); return n===2?"결승":n===4?"4강":`${n}강`; };
+function tourPlace(t,uid){ if(!t) return null; if(t.champion&&t.champion.uid===uid) return 1; if(t.runnerUp&&t.runnerUp.uid===uid) return 2;
+  return t.rounds.some(r=>r.some(m=>(m.a&&m.a.uid===uid)||(m.b&&m.b.uid===uid)))?0:null; }
+async function tourInit(){ // 지난주 결과: 관리자 기기가 한 번 확정해서 저장해요
+  const pw=weekId(-1);
+  try{ const s=await cloud.db.doc("tourney/"+pw).get(); if(s.exists) tourPrev=JSON.parse(JSON.stringify(s.data()));
+    else if(FB.isOwner){ const list=await FB.arena.list(); const res=tourRun(list,pw); if(res){ await cloud.db.doc("tourney/"+pw).set(res); tourPrev=res; } } }catch(e){}
+  tourPrevLoaded=true; if(view==="battle"&&bv.sub==="tour"&&!bt) renderBattle(); }
+function tourHTML(){
+  if(arenaList===null) pvpLoad();
+  const live=arenaList?tourRun(arenaList,weekId()):null, me=FB.uid;
+  const prize=tourPrev&&tourPlace(tourPrev,me), claimed=tourPrev&&tourClaim.claimed&&tourClaim.claimed[tourPrev.week];
+  const bracket=t=>t.rounds.map((r,i)=>`<div class="trround"><h4>${roundName(i,t.rounds.length)}</h4>${r.map(m=>{ const nm=x=>x?`<span class="${x.uid===m.w?"tw":"tl"} ${x.uid===me?"tme":""}">${esc(x.name||"이름 없음")}</span>`:`<span class="tl">부전승</span>`;
+    return `<div class="trm">${nm(m.a)}<i>vs</i>${nm(m.b)}</div>`; }).join("")}</div>`).join("");
+  return `<div class="pvp">
+    <div class="pvpme"><h3>🏆 주간 토너먼트</h3><p class="note" style="margin:0">'친구 대결'에 등록된 팀들이 매주 자동으로 토너먼트를 해요(최대 16팀). 전투력 순으로 대진이 정해지고, 결과는 매주 일요일 밤 12시 기준으로 확정돼요.</p>
+      <p class="note" style="margin:0">상품: 우승 펫 뽑기권 2장·코인 100k·보석 1k / 준우승 뽑기권 1장·코인 50k·보석 500 / 참가 코인 10k·보석 100</p></div>
+    ${tourPrev?`<div class="trprev"><h3>지난주 결과 (${tourPrev.week} 주)</h3><p class="trchamp">👑 ${esc(tourPrev.champion.name||"")} 우승!${tourPrev.runnerUp?` · 🥈 ${esc(tourPrev.runnerUp.name||"")}`:""}</p>
+      ${prize!=null?(claimed?`<p class="note" style="margin:0">상품을 받았어요 ✓</p>`:`<button class="btn kakao" id="tourClaim">${prize===1?"우승":prize===2?"준우승":"참가"} 상품 받기</button>`):""}
+      <details class="hdet" style="border:0;padding:0"><summary style="text-align:left">지난주 대진표 보기</summary>${bracket(tourPrev)}</details></div>`
+      :tourPrevLoaded?`<p class="note">지난주 결과는 관리자가 접속하면 확정돼요.</p>`:""}
+    <h3 style="margin:4px 0 0">이번 주 예상 대진표</h3><p class="note" style="margin:0">${weekEndText()}에 확정돼요. 그 전에 팀을 키우면 결과가 바뀌어요!</p>
+    ${live?bracket(live)+`<p class="trchamp">지금대로라면 👑 ${esc(live.champion.name||"")} 우승</p>`:`<p class="note">팀을 등록한 사람이 2명 이상이면 대진표가 나와요.</p>`}
+  </div>`;
+}
+function tourBind(el){ const c=$("#tourClaim"); if(c) c.onclick=()=>{ const pl=tourPlace(tourPrev,FB.uid); if(pl==null||tourClaim.claimed[tourPrev.week]) return;
+  const g=TOUR_PRIZE[pl]; tourClaim.claimed=Object.assign({},tourClaim.claimed,{[tourPrev.week]:true}); saveTour(); giveAll(g); confetti(); toast(`토너먼트 상품: ${giftText(g)}!`); renderBattle(); }; }
+
+/* ---------- 14. 레이드 보스: 모두가 함께 때리는 거대 보스 ---------- */
+let raidDoc=null, raidDmg=[], raidMine={day:"",n:0,claimed:{}}, raidUnsub=null; const saveRaid=makeSaver("settings/raid",()=>raidMine);
+const RAID_PER_DAY=3;
+const RAID_PRIZE=place=>place===1?{tickets:3,gems:3000,coins:300000}:place===2?{tickets:2,gems:2000,coins:200000}:place===3?{tickets:1,gems:1500,coins:150000}:{gems:500,coins:50000};
+async function raidInit(){ const rid=weekId();
+  if(FB.isOwner){ try{ const list=await FB.arena.list(); const tot=list.reduce((s,a)=>s+(+a.power||0),0);
+    const boss=BOSSES[Math.floor(new Date(rid).getTime()/6048e5)%BOSSES.length], H=Math.min(9e15,Math.max(50000,Math.round(tot*60)));
+    await FB.raid.create(rid,{week:rid,boss,max:H,hp:H,maxHit:Math.max(1,Math.ceil(H/6)),at:Date.now()}); }catch(e){} }
+  raidUnsub&&raidUnsub.forEach(u=>u&&u()); raidUnsub=[FB.raid.watch(rid,v=>{ raidDoc=v; if(view==="battle"&&bv.sub==="raid"&&!bt&&!raidBusy) renderBattle(); }),
+    FB.raid.watchDmg(rid,l=>{ raidDmg=l.sort((a,b)=>(b.dmg||0)-(a.dmg||0)); if(view==="battle"&&bv.sub==="raid"&&!bt&&!raidBusy) renderBattle(); })]; }
+let raidBusy=false, raidLast=null;
+const raidLeft=()=>raidMine.day===dayKey()?Math.max(0,RAID_PER_DAY-(raidMine.n||0)):RAID_PER_DAY;
+async function raidAttack(){
+  if(!raidDoc||raidDoc.hp<=0||raidBusy) return; if(!raidLeft()){ toast("오늘 공격 기회를 다 썼어요. 내일 또 와요!"); return; }
+  const mine=myArenaTeam(); if(!mine.length){ toast("먼저 팀을 골라 주세요"); bv.sub="cards"; renderBattle(); return; }
+  raidBusy=true; const A=simTeam(mine), avgAtk=A.reduce((s,u)=>s+u.atk,0)/A.length, avgHp=A.reduce((s,u)=>s+u.max,0)/A.length;
+  const boss={sid:raidDoc.boss,hp:9e18,max:9e18,atk:Math.max(1,Math.round(avgHp*0.12+avgAtk*0.5)),sk:{type:"smash",pow:2.5,cd:4},ch:0,stun:0,shield:0};
+  const res=simFight(A,[boss],seedRand("raid|"+Date.now()),40);
+  raidMine={...raidMine,day:dayKey(),n:(raidMine.day===dayKey()?raidMine.n||0:0)+1}; saveRaid();
+  try{ const r=await FB.raid.attack(raidDoc.week,res.dealt); raidLast={dmg:r.dealt,kill:r.hp<=0}; spXP(15); if(r.hp<=0){ confetti(); } }
+  catch(e){ raidLast={err:true}; }
+  raidBusy=false; renderBattle(); }
+function raidHTML(){
+  if(!raidDoc) return `<div class="pvp"><div class="pvpme"><h3>🐉 레이드 보스</h3><p class="note" style="margin:0">이번 주 레이드는 관리자가 접속하면 열려요. 매주 월요일에 새 보스가 나타나요.</p></div></div>`;
+  const ph=cardPhoto(raidDoc.boss), dead=raidDoc.hp<=0, my=raidDmg.find(d=>d.me), place=my?raidDmg.indexOf(my)+1:null, claimed=raidMine.claimed&&raidMine.claimed[raidDoc.week];
+  return `<div class="pvp">
+    <div class="raidboss ${dead?"dead":""}">${ph?`<img src="${urlOf(ph)}" alt="">`:""}<div class="raidinfo"><b>${esc(koOf(raidDoc.boss))}</b><span>이번 주 레이드 보스</span></div></div>
+    <div class="hpb raidhp"><i class="hpf" style="width:${Math.max(0,raidDoc.hp)/raidDoc.max*100}%"></i><span class="hpt">${fmt(Math.max(0,raidDoc.hp))} / ${fmt(raidDoc.max)}</span></div>
+    ${dead?`<p class="trchamp">🎉 모두 함께 보스를 쓰러뜨렸어요!</p>${my?(claimed?`<p class="note" style="margin:0;text-align:center">보상을 받았어요 ✓</p>`:`<button class="btn kakao" id="raidClaim">${place<=3?`기여 ${place}등 보상`:"참여 보상"} 받기 (${giftText(RAID_PRIZE(place))})</button>`):`<p class="note">이번엔 참여하지 못했어요. 다음 주에 함께해요!</p>`}`
+      :`<button class="btn" id="raidGo" ${raidLeft()&&!raidBusy?"":"disabled"}>⚔️ 내 팀으로 공격! (오늘 ${raidLeft()}번 남음)</button>`}
+    ${raidLast?`<p class="raidlast">${raidLast.err?"공격하지 못했어요. 다시 해 주세요":`내 팀이 ${fmt(raidLast.dmg)} 피해를 줬어요!${raidLast.kill?" 마지막 일격! 🗡️":""}`}</p>`:""}
+    <p class="note" style="margin:0">하루에 ${RAID_PER_DAY}번, 친구 대결에 등록된 내 팀으로 보스를 공격해요. 보스 체력은 모두가 함께 깎아요. 쓰러뜨리면 기여한 사람 모두 보상을 받고, 많이 때린 1~3등은 펫 뽑기권을 더 받아요.</p>
+    <h3 style="margin:4px 0 0">기여 순위</h3>
+    <ol class="rklist">${raidDmg.map((d,i)=>`<li class="${d.me?"me":""}"><span class="rkp">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><b>${esc(d.name||"이름 없음")}${d.me?" (나)":""}</b><span class="rks">${fmt(d.dmg||0)}</span><span class="rkt">${d.n||0}번</span></li>`).join("")||`<p class="note">아직 아무도 공격하지 않았어요. 첫 공격의 주인공이 되어 보세요!</p>`}</ol></div>`;
+}
+function raidBind(el){ const g=$("#raidGo"); if(g) g.onclick=raidAttack;
+  const c=$("#raidClaim"); if(c) c.onclick=()=>{ const my=raidDmg.find(d=>d.me); if(!my||(raidMine.claimed||{})[raidDoc.week]) return; const pl=raidDmg.indexOf(my)+1, g2=RAID_PRIZE(pl);
+    raidMine.claimed=Object.assign({},raidMine.claimed,{[raidDoc.week]:true}); saveRaid(); giveAll(g2); confetti(); toast(`레이드 보상: ${giftText(g2)}!`); renderBattle(); }; }
+function initG6Cloud(d){
+  d.doc("settings/tour").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tour"]) tourClaim=Object.assign({claimed:{}},JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
+  d.doc("settings/raid").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/raid"]) raidMine=Object.assign({day:"",n:0,claimed:{}},JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
+  setTimeout(()=>{ tourInit(); raidInit(); },2500); }
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
 

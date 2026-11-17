@@ -131,6 +131,19 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .tm-hunger{background:linear-gradient(90deg,#E4572E,#F2C14E)!important}.tm-fun{background:linear-gradient(90deg,#D65CA8,#A05CD6)!important}.tm-energy{background:linear-gradient(90deg,#3FA7D6,#9BC53D)!important}
 .tmacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tmacts #tmGift{grid-column:1/-1}
 @media (prefers-reduced-motion:reduce){.tmpet,.tmzzz,.tmheart{animation:none}}
+.trprev{display:flex;flex-direction:column;gap:6px;background:color-mix(in srgb,#FFD34D 22%,var(--surface));border:2px solid #F2C14E;border-radius:14px;padding:12px}
+.trprev h3{margin:0}.trchamp{margin:0;font-family:var(--display);font-size:1.15rem;text-align:center}
+.trround{display:flex;flex-direction:column;gap:4px;margin:6px 0}.trround h4{margin:0;font-size:.9rem;opacity:.75}
+.trm{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.9rem}
+.trm i{font-style:normal;opacity:.5;font-size:.75rem}.trm span:last-child{text-align:right}
+.trm .tw{font-weight:700}.trm .tw::after{content:" ✓";color:#2E8B57}.trm .tl{opacity:.5}.trm .tme{background:color-mix(in srgb,#FFD34D 50%,transparent);border-radius:6px;padding:0 4px}
+.raidboss{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/10;background:#1B1033}
+.raidboss img{width:100%;height:100%;object-fit:cover;filter:saturate(1.2) contrast(1.05)}
+.raidboss.dead img{filter:grayscale(1) brightness(.6)}
+.raidinfo{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;display:flex;flex-direction:column}
+.raidinfo b{font-family:var(--display);font-size:1.5rem}.raidinfo span{font-size:.8rem;opacity:.85}
+.raidhp{height:22px}.raidhp .hpf{background:linear-gradient(90deg,#C0392B,#E4572E)}
+.raidlast{margin:0;text-align:center;font-weight:700;color:#E4572E}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{

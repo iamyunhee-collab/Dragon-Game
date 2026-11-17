@@ -4,7 +4,7 @@
    - 내 게임 기록(보석, 카드, 미니게임) → users/{내 uid}/...  (나만 읽고 쓰기) */
 (function(){
   "use strict";
-  const SHARED_COLL=new Set(["photos","live","petdefs","petphotos","blobs"]);
+  const SHARED_COLL=new Set(["photos","live","petdefs","petphotos","blobs","tourney"]);
   const SHARED_DOC=new Set(["settings/rarity","settings/extras","settings/battle","settings/minidefaults","settings/events"]);
   const BLANK="";
   let app,auth,fs,user=null,isOwner=false,myName="",myBday="",readyResolve,readyReject;
@@ -201,7 +201,18 @@
     async record(win){ const ref=fs.doc("arena/"+user.uid); const s=await ref.get(); if(!s.exists) return; const v=s.data();
       await ref.set({name:v.name,team:v.team,power:v.power,wins:Math.floor(v.wins||0)+(win?1:0),losses:Math.floor(v.losses||0)+(win?0:1),at:firebase.firestore.FieldValue.serverTimestamp()}); }
   };
-  window.FB={ publishBlobs, rank, arena, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  /* 레이드: raid/{주} 보스 체력은 모두가 함께, raid/{주}/dmg/{uid} 는 내 기여 */
+  const raid={
+    watch(rid,cb){ return fs.doc("raid/"+rid).onSnapshot(s=>cb(s.exists?s.data():null),()=>cb(null)); },
+    watchDmg(rid,cb){ return fs.collection("raid/"+rid+"/dmg").onSnapshot(s=>cb(s.docs.map(d=>Object.assign({},d.data(),{uid:d.id,me:d.id===user.uid}))),()=>cb([])); },
+    async create(rid,data){ if(!isOwner) return; const ref=fs.doc("raid/"+rid); const s=await ref.get(); if(s.exists) return; await ref.set(data); },
+    async attack(rid,dmg){ dmg=Math.max(1,Math.min(9e15,Math.floor(+dmg||0))); const ref=fs.doc("raid/"+rid), mine=fs.doc("raid/"+rid+"/dmg/"+user.uid);
+      return fs.runTransaction(async tx=>{ const s=await tx.get(ref); if(!s.exists) throw new Error("no raid"); const v=s.data(); if(v.hp<=0) return {dealt:0,hp:0};
+        const d=Math.min(dmg,v.maxHit,v.hp); const m=await tx.get(mine); const prev=m.exists?m.data():{dmg:0,n:0};
+        tx.update(ref,{hp:v.hp-d}); tx.set(mine,{dmg:Math.floor(prev.dmg||0)+d,n:Math.floor(prev.n||0)+1,name:myName.slice(0,20)||"이름 없음",at:firebase.firestore.FieldValue.serverTimestamp()});
+        return {dealt:d,hp:v.hp-d}; }); }
+  };
+  window.FB={ publishBlobs, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{
