@@ -189,7 +189,7 @@ async function initCloud(){
     d.doc("settings/rarity").onSnapshot(s=>{ if(s.exists){ const v=s.data()||{}; rarity=JSON.parse(JSON.stringify(v.map||{})); if(v.odds) odds=Object.assign({},ODDS0,v.odds); if(view==="fortune") renderFortune(); } },()=>{});
     d.collection("petdefs").onSnapshot(s=>{ petDefs=s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); if(view==="fortune") renderFortune(); },()=>{});
     d.collection("petphotos").onSnapshot(s=>{ petPhotos=s.docs.map(x=>({id:x.id,...x.data()})); if(view==="fortune") renderFortune(); },()=>{});
-    initBattleCloud(d); initClickCloud(d); initSuikaCloud(d); initMiniCloud(d); initBerkCloud(d); initEventsCloud(d);
+    initBattleCloud(d); initClickCloud(d); initSuikaCloud(d); initMiniCloud(d); initBerkCloud(d); initEventsCloud(d); initG5Cloud(d);
     await initPurse(d);
     initTally(d);
     d.doc("settings/extras").onSnapshot(s=>{ if(s.exists){ extras=JSON.parse(JSON.stringify((s.data()||{}).map||{})); rerender(); } },()=>{});
@@ -1733,6 +1733,10 @@ function renderClick(force){
   if(mgMode==="simon"){ if(force||!$(".smgrid")) renderSimon(); return; }
   if(mgMode==="egg"){ if(force||!$("#eggCanvas")) renderEgg(); return; }
   if(mgMode==="dodge"){ if(force||!$("#dodgeCanvas")) renderDodge(); return; }
+  if(mgMode==="tama"){ if(force||!$(".tama")) renderTama(); return; }
+  if(mgMode==="rhythm"){ if(force||!$("#rhythmCanvas")) renderRhythm(); return; }
+  if(mgMode==="magic"){ if(force||!$("#magicCanvas")) renderMagic(); return; }
+  if(mgMode==="tetris"){ if(force||!$("#tetrisCanvas")) renderTetris(); return; }
   if(mgMode==="berk"){ if(force||!$("#bkMap")) renderBerk(); else bkRefresh(); return; }
   const el=$("#clickView"); if(!el) return;
   const own=ckOwned(), my=ckMine(), tg=ckTarget();
@@ -1971,8 +1975,8 @@ async function skUpload(files,slot){
   }
   if(n) toast(`사진 ${n}장 넣었어요`);
 }
-function mgTabsHtml(){ return `<div class="mgbar"><div class="mgtabs" role="tablist"><button role="tab" data-mg="click" aria-selected="${mgMode==="click"}">클릭커</button><button role="tab" data-mg="suika" aria-selected="${mgMode==="suika"}">수박게임</button><button role="tab" data-mg="fly" aria-selected="${mgMode==="fly"}">비행</button><button role="tab" data-mg="hide" aria-selected="${mgMode==="hide"}">숨바꼭질</button><button role="tab" data-mg="mem" aria-selected="${mgMode==="mem"}">짝맞추기</button><button role="tab" data-mg="sling" aria-selected="${mgMode==="sling"}">불뿜기</button><button role="tab" data-mg="run" aria-selected="${mgMode==="run"}">달리기</button><button role="tab" data-mg="stack" aria-selected="${mgMode==="stack"}">탑쌓기</button><button role="tab" data-mg="simon" aria-selected="${mgMode==="simon"}">순서기억</button><button role="tab" data-mg="egg" aria-selected="${mgMode==="egg"}">알 받기</button><button role="tab" data-mg="dodge" aria-selected="${mgMode==="dodge"}">불꽃피하기</button><button role="tab" data-mg="berk" aria-selected="${mgMode==="berk"}">버크 만들기</button></div><button class="btn ghost small mgrank" data-mgrank>랭킹</button><button class="btn ghost small mgfsbtn" data-mgfull aria-pressed="${mgFull}">${mgFull?"닫기":"전체화면"}</button></div>`; }
-function bindMgTabs(){ document.querySelectorAll("[data-mgrank]").forEach(b=>b.onclick=()=>openRank({suika:"suika",fly:"fly",hide:"hide",mem:"mem_"+(M&&M.lv||"easy"),sling:"sling",run:"run",stack:"stack",simon:"simon",egg:"egg",dodge:"dodge"}[mgMode]||"suika")); const on=document.querySelector('.mgtabs [aria-selected="true"]'); if(on){ const bar=on.parentElement; bar.scrollLeft=on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2; } document.querySelectorAll("[data-mgfull]").forEach(b=>b.onclick=()=>mgSetFull(!mgFull)); document.querySelectorAll("[data-mg]").forEach(b=>b.onclick=()=>{ if(mgMode===b.dataset.mg) return; mgMode=b.dataset.mg; try{ localStorage.setItem("httyd-mgMode",mgMode); }catch(e){} renderClick(true); }); }
+function mgTabsHtml(){ return `<div class="mgbar"><div class="mgtabs" role="tablist"><button role="tab" data-mg="click" aria-selected="${mgMode==="click"}">클릭커</button><button role="tab" data-mg="suika" aria-selected="${mgMode==="suika"}">수박게임</button><button role="tab" data-mg="fly" aria-selected="${mgMode==="fly"}">비행</button><button role="tab" data-mg="hide" aria-selected="${mgMode==="hide"}">숨바꼭질</button><button role="tab" data-mg="mem" aria-selected="${mgMode==="mem"}">짝맞추기</button><button role="tab" data-mg="sling" aria-selected="${mgMode==="sling"}">불뿜기</button><button role="tab" data-mg="run" aria-selected="${mgMode==="run"}">달리기</button><button role="tab" data-mg="stack" aria-selected="${mgMode==="stack"}">탑쌓기</button><button role="tab" data-mg="simon" aria-selected="${mgMode==="simon"}">순서기억</button><button role="tab" data-mg="egg" aria-selected="${mgMode==="egg"}">알 받기</button><button role="tab" data-mg="dodge" aria-selected="${mgMode==="dodge"}">불꽃피하기</button><button role="tab" data-mg="berk" aria-selected="${mgMode==="berk"}">버크 만들기</button><button role="tab" data-mg="tama" aria-selected="${mgMode==="tama"}">드래곤 키우기</button><button role="tab" data-mg="rhythm" aria-selected="${mgMode==="rhythm"}">리듬</button><button role="tab" data-mg="magic" aria-selected="${mgMode==="magic"}">불꽃 마법</button><button role="tab" data-mg="tetris" aria-selected="${mgMode==="tetris"}">테트리스</button></div><button class="btn ghost small mgrank" data-mgrank>랭킹</button><button class="btn ghost small mgfsbtn" data-mgfull aria-pressed="${mgFull}">${mgFull?"닫기":"전체화면"}</button></div>`; }
+function bindMgTabs(){ document.querySelectorAll("[data-mgrank]").forEach(b=>b.onclick=()=>openRank({suika:"suika",fly:"fly",hide:"hide",mem:"mem_"+(M&&M.lv||"easy"),sling:"sling",run:"run",stack:"stack",simon:"simon",egg:"egg",dodge:"dodge",rhythm:"rhythm",magic:"magic",tetris:"tetris"}[mgMode]||"suika")); const on=document.querySelector('.mgtabs [aria-selected="true"]'); if(on){ const bar=on.parentElement; bar.scrollLeft=on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2; } document.querySelectorAll("[data-mgfull]").forEach(b=>b.onclick=()=>mgSetFull(!mgFull)); document.querySelectorAll("[data-mg]").forEach(b=>b.onclick=()=>{ if(mgMode===b.dataset.mg) return; mgMode=b.dataset.mg; try{ localStorage.setItem("httyd-mgMode",mgMode); }catch(e){} renderClick(true); }); }
 
 // ---------- 미니게임: 드래곤 비행 · 드래곤 숨바꼭질 ----------
 let mini={flyBest:0,hideBest:0};
@@ -2848,9 +2852,10 @@ const RANK_GAMES={
   suika:{name:"수박게임",unit:"점"}, fly:{name:"비행",unit:"개 통과"}, hide:{name:"숨바꼭질",unit:"점"},
   mem_easy:{name:"짝맞추기 쉬움",unit:"번",low:true}, mem_normal:{name:"짝맞추기 보통",unit:"번",low:true}, mem_hard:{name:"짝맞추기 어려움",unit:"번",low:true},
   sling:{name:"불뿜기",unit:"점"}, run:{name:"달리기",unit:"m"}, stack:{name:"탑쌓기",unit:"층"},
-  simon:{name:"순서기억",unit:"개"}, egg:{name:"알 받기",unit:"점"}, dodge:{name:"불꽃피하기",unit:"초"}};
-const MG_KEY2GAME={run:"run",stack:"stack",sling:"sling",sm:"simon",egg:"egg",dodge:"dodge"};
-const MG_SCORE={run:()=>Math.floor(R.dist/20),stack:()=>T.blocks.length-1,sling:()=>S.score,sm:()=>SM.round,egg:()=>E.score,dodge:()=>Math.floor(D.time/60)};
+  simon:{name:"순서기억",unit:"개"}, egg:{name:"알 받기",unit:"점"}, dodge:{name:"불꽃피하기",unit:"초"},
+  rhythm:{name:"리듬",unit:"점"}, magic:{name:"불꽃 마법",unit:"점"}, tetris:{name:"테트리스",unit:"점"}};
+const MG_KEY2GAME={run:"run",stack:"stack",sling:"sling",sm:"simon",egg:"egg",dodge:"dodge",rhythm:"rhythm",magic:"magic",tetris:"tetris"};
+const MG_SCORE={run:()=>Math.floor(R.dist/20),stack:()=>T.blocks.length-1,sling:()=>S.score,sm:()=>SM.round,egg:()=>E.score,dodge:()=>Math.floor(D.time/60),rhythm:()=>Math.floor(RH.score),magic:()=>MW.score,tetris:()=>TT.score};
 const fmtScore=(g,v)=>`${fmt(v)}${RANK_GAMES[g].unit}`;
 // 게임이 끝나면: 랭킹에 기록하고, 결과 창에 '자랑하기'와 '랭킹 보기' 버튼을 붙여요
 function brag(overId,game,score){
@@ -2915,7 +2920,7 @@ async function openRank(game){
 
 // 이전에 세운 내 최고 기록도 랭킹에 올려요 (앱을 열 때 한 번, 더 좋은 기록일 때만)
 setTimeout(()=>{ if(!cloud) return; const mb=mini.memBest||{};
-  [["suika",sk.best],["fly",mini.flyBest],["hide",mini.hideBest],["mem_easy",mb.easy],["mem_normal",mb.normal],["mem_hard",mb.hard],["sling",mini.slingBest],["run",mini.runBest],["stack",mini.stackBest],["simon",mini.simonBest],["egg",mini.eggBest],["dodge",mini.dodgeBest]]
+  [["suika",sk.best],["fly",mini.flyBest],["hide",mini.hideBest],["mem_easy",mb.easy],["mem_normal",mb.normal],["mem_hard",mb.hard],["sling",mini.slingBest],["run",mini.runBest],["stack",mini.stackBest],["simon",mini.simonBest],["egg",mini.eggBest],["dodge",mini.dodgeBest],["rhythm",mini.rhythmBest],["magic",mini.magicBest],["tetris",mini.tetrisBest]]
     .forEach(([g,v])=>{ if(v) FB.rank.seed(g,v).catch(()=>{}); }); },8000);
 
 // ---------- 친구 대결: 친구가 등록한 팀과 내 팀이 싸워요 (친구가 접속해 있지 않아도 돼요) ----------
@@ -3043,6 +3048,31 @@ const HOME_SECTIONS=[
    <li>전투에 나갈 드래곤 <b>3마리</b>와 응원할 펫을 골라요.</li></ul>`},
  ]},
  {title:"미니게임",items:[
+  {id:"tama",ico:"🥚",col:"#F08A4B",name:"드래곤 키우기",sum:"내 드래곤에게 밥 주고 놀아 주기",go:()=>goMini("tama"),
+   det:`<p>뽑은 드래곤 한 마리를 골라서 <b>직접 키워요</b>. 다마고치처럼 실제 시간이 흐르면 상태가 바뀌어요.</p>
+   <ul><li>🍖 배부름, 🎈 즐거움, ⚡ 기운이 있어요. 시간이 지나면 조금씩 줄어요.</li>
+   <li><b>밥 주기</b>는 물고기를 써요. 드래곤을 <b>손가락으로 쓰다듬으면</b> 즐거움이 올라가요. <b>재우면</b> 기운이 다시 차요.</li>
+   <li>돌봐 줄수록 애정이 쌓여서 레벨이 올라요. 레벨이 오를 때마다 보석 선물을 줘요.</li>
+   <li>세 가지가 모두 50 이상이면 하루에 한 번 <b>오늘의 선물</b>(보석·물고기)을 받아요.</li>
+   <li>오래 안 돌보면 배고파하고 시무룩해져요. 매일 들러 주세요!</li></ul>`},
+  {id:"rhythm",ico:"🎵",col:"#A05CD6",name:"리듬",sum:"박자에 맞춰 발자국 누르기",go:()=>goMini("rhythm"),
+   det:`<p>음악에 맞춰 네 줄로 <b>드래곤 발자국</b>이 떨어져요. 아래 선에 닿는 순간 그 줄을 눌러요.</p>
+   <ul><li>딱 맞으면 <b>완벽!</b>(300점), 조금 빗나가면 <b>좋아!</b>(100점)이에요.</li>
+   <li>연속으로 맞히면 <b>콤보</b>가 쌓여서 점수가 커져요. 놓치면 콤보가 끊겨요.</li>
+   <li>1분짜리 곡이고, 뒤로 갈수록 발자국이 많아지고 두 개가 같이 나오기도 해요.</li>
+   <li>소리를 켜고 하면 훨씬 재밌어요. 점수는 <b>랭킹</b>에 올라가요.</li></ul>`},
+  {id:"magic",ico:"🪄",col:"#E4572E",name:"불꽃 마법",sum:"모양을 그려 바이킹 물리치기",go:()=>goMini("magic"),
+   det:`<p>바이킹들이 마을로 걸어와요. 바이킹 머리 위에 있는 <b>노란 모양</b>을 화면에 손가락으로 그리면 드래곤이 불을 뿜어요.</p>
+   <ul><li>모양은 ─ (가로줄), │ (세로줄), V, Λ, ○ (동그라미), Z 여섯 가지예요.</li>
+   <li>같은 모양을 가진 바이킹이 <b>한꺼번에</b> 맞아요. 모양을 모두 지우면 쓰러져요.</li>
+   <li>갈수록 모양이 2~3개인 바이킹이 나와요. 순서대로 그려야 해요.</li>
+   <li>바이킹이 빨간 선까지 오면 마을 하트가 줄어요. 하트 3개가 다 없어지면 끝나요.</li></ul>`},
+  {id:"tetris",ico:"🧩",col:"#3FA7D6",name:"테트리스",sum:"블록으로 줄을 채워 지우기",go:()=>goMini("tetris"),
+   det:`<p>떨어지는 블록을 돌리고 옮겨서 <b>가로 한 줄을 꽉 채우면</b> 사라져요.</p>
+   <ul><li>아래 버튼: ◀ ▶ 옮기기, ⟳ 돌리기, ▼ 한 칸 내리기, ⤓ 바로 떨어뜨리기. 버튼을 누르고 있으면 계속 움직여요.</li>
+   <li>판을 좌우로 밀어서 옮기거나, 톡 눌러 돌리거나, 아래로 쓸어 바로 떨어뜨릴 수도 있어요.</li>
+   <li>한 번에 많이 지울수록 점수가 커져요. 4줄을 한 번에 지우면 <b>테트리스!</b></li>
+   <li>10줄마다 레벨이 오르고 빨라져요. 위까지 꽉 차면 끝나요.</li></ul>`},
   {id:"berk",ico:"🏝️",col:"#4CB944",name:"버크 만들기",sum:"건물을 지어 나만의 마을 키우기",go:()=>goMini("berk"),
    det:`<p><b>계절</b>이 바뀌면 마을 모습과 보너스가 바뀌어요. 봄엔 양 목장, 여름엔 어부 오두막, 가을엔 모든 건물, 겨울엔 바이킹 집이 더 많이 모아요.
    계절마다 그 계절에만 지을 수 있는 <b>계절 동상</b>이 있어요. 한 번 지으면 계속 남아서 마을 전체 생산을 올려 줘요. (라이즈 오브 버크처럼!)</p><p>버크 섬 지도의 땅을 눌러 <b>물고기</b>로 건물을 지어요. 건물은 <b>1분마다 물고기를 모아</b> 줘요.</p>
@@ -3249,6 +3279,219 @@ function initEventsCloud(d){
   d.doc("settings/events").onSnapshot(s=>{ if(s.exists) evCfg=Object.assign({},evCfg,JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
   setTimeout(()=>{ spDaily(); checkBirthday(); },3500);
 }
+
+// ===================== 드래곤 키우기(다마고치) · 리듬 · 불꽃 그리기 마법 · 테트리스 =====================
+
+/* ---------- 19. 드래곤 키우기 ---------- */
+let tama={sid:"",hunger:80,fun:80,energy:80,sleeping:false,last:Date.now(),xp:0,lv:1,giftDay:"",taps:0};
+const saveTama=makeSaver("settings/tama",()=>tama);
+const TAMA_RATE={hunger:-6,fun:-5,energy:-4}; // 1시간마다
+function tamaTick(){ const now=Date.now(), h=Math.min(48,(now-(tama.last||now))/3600e3); if(h<=0) return;
+  const cl=v=>Math.max(0,Math.min(100,v));
+  tama.hunger=cl(tama.hunger+(tama.sleeping?-3:TAMA_RATE.hunger)*h); tama.fun=cl(tama.fun+(tama.sleeping?-2:TAMA_RATE.fun)*h);
+  tama.energy=cl(tama.energy+(tama.sleeping?15:TAMA_RATE.energy)*h); if(tama.sleeping&&tama.energy>=100) tama.sleeping=false; tama.last=now; }
+const tamaNeed=()=>tama.lv*50;
+function tamaXP(n){ tama.xp=(tama.xp||0)+n; while(tama.xp>=tamaNeed()){ tama.xp-=tamaNeed(); tama.lv++; const g=tama.lv*50; bump("gems",g); confetti(); toast(`드래곤이 Lv.${tama.lv}로 자랐어요! 보석 ${fmt(g)}개 선물`); } }
+function tamaSid(){ const own=ckOwned(); if(tama.sid&&own.includes(tama.sid)) return tama.sid; return own[0]||""; }
+function tamaMood(){ if(tama.sleeping) return ["😴","쿨쿨… 자는 중이에요"]; const lo=Math.min(tama.hunger,tama.fun,tama.energy);
+  if(tama.hunger<25) return ["😢","배고파요… 밥 주세요!"]; if(tama.energy<25) return ["🥱","너무 졸려요. 재워 주세요"]; if(tama.fun<25) return ["😞","심심해요. 놀아 주세요!"];
+  if(lo>=70) return ["😄","최고로 행복해요!"]; if(lo>=45) return ["🙂","기분 좋아요"]; return ["😐","조금 힘들어요"]; }
+function renderTama(){
+  const el=$("#clickView"); if(!el) return; tamaTick();
+  const sid=tamaSid(), ph=sid&&cardPhoto(sid), [face,say]=tamaMood(), own=ckOwned(), feedCost=100*tama.lv, today=dayKey(), canGift=tama.giftDay!==today&&Math.min(tama.hunger,tama.fun,tama.energy)>=50;
+  const bar=(k,ico,lab)=>`<div class="tmbar"><span>${ico} ${lab}</span><div class="bankbar"><i class="tm-${k}" style="width:${tama[k]}%"></i></div><b>${Math.round(tama[k])}</b></div>`;
+  el.innerHTML=mgTabsHtml()+`<div class="tama">
+    ${sid?`<div class="tmstage ${tama.sleeping?"sleep":""}"><button class="tmpet" id="tmPet" aria-label="쓰다듬기">${ph?`<img src="${urlOf(ph)}" alt="" draggable="false">`:""}</button>
+      <span class="tmface">${face}</span>${tama.sleeping?`<span class="tmzzz">Z z z</span>`:""}<p class="tmsay">${say}</p></div>
+      <div class="tmname"><b>${esc(koOf(sid))}</b> <span class="clv2">Lv.${tama.lv}</span><div class="bankbar"><i style="width:${tama.xp/tamaNeed()*100}%"></i></div><span class="note">다음 레벨까지 ${tamaNeed()-tama.xp} 애정</span></div>
+      <div class="tmbars">${bar("hunger","🍖","배부름")}${bar("fun","🎈","즐거움")}${bar("energy","⚡","기운")}</div>
+      <div class="tmacts"><button class="btn fishbtn" id="tmFeed" ${tama.sleeping?"disabled":""}>🐟 밥 주기 (${fmt(feedCost)})</button>
+        <button class="btn" id="tmSleep">${tama.sleeping?"☀️ 깨우기":"🌙 재우기"}</button>
+        <button class="btn kakao" id="tmGift" ${canGift?"":"disabled"}>🎁 오늘의 선물</button></div>
+      <p class="note" style="margin:0;text-align:center">드래곤을 손가락으로 쓰다듬으면 즐거움이 올라가요. 시간이 지나면 배가 고파지고 심심해지고 졸려져요. 세 가지가 모두 50 이상이면 하루에 한 번 선물을 줘요.</p>
+      ${own.length>1?`<p class="sec-title">키울 드래곤 바꾸기</p><div class="ckpick">${own.map(id=>`<button class="ckp ${id===sid?"on":""} ${(TIER_BY[tierOf(id)]||TIER_BY.common).cls}" data-tmpick="${id}"><img src="${urlOf(cardPhoto(id))}" alt=""><span>${esc(koOf(id))}</span></button>`).join("")}</div>`:""}`
+    :`<div class="empty"><h2>키울 드래곤이 없어요</h2><p class="note">뽑기에서 드래곤을 뽑으면 키울 수 있어요.</p></div>`}</div>`;
+  bindMgTabs(); if(!sid) return;
+  const save=()=>{ saveTama(); };
+  $("#tmPet").addEventListener("pointerdown",e=>{ e.preventDefault(); if(tama.sleeping){ toast("자고 있어요. 깨우면 같이 놀 수 있어요"); return; }
+    if(tama.energy<5){ toast("너무 졸려서 못 놀아요"); return; }
+    tama.fun=Math.min(100,tama.fun+3); tama.taps=(tama.taps||0)+1; if(tama.taps%5===0){ tama.energy=Math.max(0,tama.energy-1); tamaXP(1); }
+    const h=document.createElement("span"); h.className="tmheart"; h.textContent=["💖","💕","✨","💗"][tama.taps%4]; h.style.left=(30+Math.random()*40)+"%"; $(".tmstage").appendChild(h); setTimeout(()=>h.remove(),900);
+    const st=$("#tmPet"); st.classList.remove("wiggle"); void st.offsetWidth; st.classList.add("wiggle");
+    clearTimeout(window._tmT); window._tmT=setTimeout(()=>{ save(); renderTama(); },900); });
+  $("#tmFeed").onclick=()=>{ if(tama.hunger>=95){ toast("배불러요! 나중에 주세요"); return; } if((ck.fish||0)<feedCost){ toast("물고기가 모자라요. 클릭커에서 잡아 오세요"); return; }
+    ck.fish-=feedCost; saveCkAll(); tama.hunger=Math.min(100,tama.hunger+25); tamaXP(5); spXP(5); save(); toast("냠냠! 맛있어요"); renderTama(); };
+  $("#tmSleep").onclick=()=>{ tama.sleeping=!tama.sleeping; save(); renderTama(); };
+  $("#tmGift").onclick=()=>{ if(!canGift) return; const g={gems:20*tama.lv,fish:500*tama.lv}; tama.giftDay=today; giveAll(g); tamaXP(10); save(); confetti(); toast(`선물: ${giftText(g)}!`); renderTama(); };
+  el.querySelectorAll("[data-tmpick]").forEach(b=>b.onclick=()=>{ tama.sid=b.dataset.tmpick; save(); renderTama(); });
+}
+
+/* ---------- 1. 드래곤 리듬 ---------- */
+const RH_LANES=4, RH_HIT=600, RH_SPEED=0.42, RH_LEN=60000, RH_COL=["#E4572E","#F2C14E","#3FA7D6","#9BC53D"], RH_HZ=[261.6,329.6,392,523.3];
+let RH=null, rhAudio=null;
+function rhNew(){ const bpm=112, beat=60000/bpm, notes=[]; let t=2000, i=0; const r=seedRand("rhythm|"+Date.now());
+  while(t<RH_LEN){ const dense=t/RH_LEN; const step=dense<.3?beat:dense<.7?beat/2:beat/2;
+    if(r()<(dense<.3?.7:dense<.7?.65:.8)){ const lane=Math.floor(r()*RH_LANES); notes.push({t,lane,hit:false,miss:false});
+      if(dense>.6&&r()<.18) notes.push({t,lane:(lane+1+Math.floor(r()*3))%RH_LANES,hit:false,miss:false}); }
+    t+=step; i++; }
+  return {state:"ready",notes,score:0,combo:0,maxCombo:0,perfect:0,good:0,miss:0,start:0,beat,fx:[],lit:[0,0,0,0]}; }
+function rhSound(hz,dur,vol,type){ try{ rhAudio=rhAudio||new (window.AudioContext||window.webkitAudioContext)(); const o=rhAudio.createOscillator(), g=rhAudio.createGain();
+  o.type=type||"triangle"; o.frequency.value=hz; g.gain.setValueAtTime(vol||.2,rhAudio.currentTime); g.gain.exponentialRampToValueAtTime(.0001,rhAudio.currentTime+dur);
+  o.connect(g).connect(rhAudio.destination); o.start(); o.stop(rhAudio.currentTime+dur+.02); }catch(e){} }
+function rhTap(x){ if(!RH) return; if(RH.state==="ready"){ RH.state="play"; RH.start=performance.now(); RH.nextBeat=0; return; } if(RH.state!=="play") return;
+  const lane=Math.max(0,Math.min(RH_LANES-1,Math.floor(x/(GW/RH_LANES)))), now=performance.now()-RH.start; RH.lit[lane]=8;
+  let best=null; for(const n of RH.notes){ if(n.hit||n.miss||n.lane!==lane) continue; const d=Math.abs(n.t-now); if(d<=170&&(!best||d<Math.abs(best.t-now))) best=n; }
+  if(!best){ return; } const d=Math.abs(best.t-now); best.hit=true; const pf=d<=75;
+  RH.combo++; RH.maxCombo=Math.max(RH.maxCombo,RH.combo); RH.score+=(pf?300:100)*(1+Math.floor(RH.combo/10)*0.1); if(pf) RH.perfect++; else RH.good++;
+  RH.fx.push({lane,t:0,txt:pf?"완벽!":"좋아!"}); rhSound(RH_HZ[lane]*(pf?2:1),.18,.18); }
+function rhEnd(){ RH.state="over"; const s=Math.floor(RH.score); const fish=miniGiveFish(Math.floor(s/50)*Math.max(1,tapValue()));
+  const nb=s>(mini.rhythmBest||0); if(nb) mini.rhythmBest=s; saveMiniAll(); mgSet("rhBest",fmt(mini.rhythmBest||0));
+  mgOver("rhythm",nb?"최고 기록!":"공연 끝!",fmt(s)+"점",[`완벽 ${RH.perfect} · 좋아 ${RH.good} · 놓침 ${RH.miss} · 최대 콤보 ${RH.maxCombo}`,`${FISH_SVG} 클릭커 물고기 ${fmt(fish)}마리 받았어요`],()=>{ RH=rhNew(); }); }
+MG_GAMES.rhythm={step(dt){
+  const ctx=mgCtx($("#rhythmCanvas")); const now=RH.state==="play"?performance.now()-RH.start:0;
+  if(RH.state==="play"){ // 박자 소리
+    const b=Math.floor(now/RH.beat); if(b>=RH.nextBeat){ RH.nextBeat=b+1; rhSound(b%4===0?90:70,.08,.25,"sine"); if(b%2===1) rhSound(2200,.03,.04,"square"); }
+    for(const n of RH.notes) if(!n.hit&&!n.miss&&now-n.t>170){ n.miss=true; RH.miss++; RH.combo=0; RH.fx.push({lane:n.lane,t:0,txt:"놓침",bad:true}); }
+    if(now>RH_LEN+800) rhEnd();
+    mgSet("rhScore",fmt(Math.floor(RH.score))); mgSet("rhCombo",RH.combo); }
+  mgSky(ctx,"#1B1033","#3B1E54");
+  const lw=GW/RH_LANES, pool=memPool();
+  for(let i=0;i<RH_LANES;i++){ ctx.fillStyle=i%2?"rgba(255,255,255,.04)":"rgba(255,255,255,.08)"; ctx.fillRect(i*lw,0,lw,GH);
+    if(RH.lit[i]>0){ ctx.fillStyle=RH_COL[i]+"44"; ctx.fillRect(i*lw,0,lw,RH_HIT+40); RH.lit[i]-=dt; } }
+  ctx.strokeStyle="rgba(255,255,255,.7)"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0,RH_HIT); ctx.lineTo(GW,RH_HIT); ctx.stroke();
+  for(const n of RH.notes){ if(n.hit) continue; const y=RH_HIT-(n.t-now)*RH_SPEED; if(y<-40||y>GH+40) continue; const x=n.lane*lw+lw/2;
+    ctx.globalAlpha=n.miss?.3:1; ctx.fillStyle=RH_COL[n.lane]; ctx.beginPath(); ctx.ellipse(x,y,lw*.36,16,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.75)"; ctx.font="20px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🐾",x,y+1); ctx.globalAlpha=1; }
+  for(let i=0;i<RH_LANES;i++){ const p=pool[i]; drawRoundImg(ctx,p&&p.url,i*lw+lw/2,RH_HIT+50,28,RH_COL[i]); }
+  RH.fx=RH.fx.filter(f=>(f.t+=dt)<40); for(const f of RH.fx){ ctx.globalAlpha=1-f.t/40; ctx.fillStyle=f.bad?"#FF6B5B":"#FFF4B0"; ctx.font="bold 24px sans-serif"; ctx.textAlign="center"; ctx.fillText(f.txt,f.lane*lw+lw/2,RH_HIT-40-f.t); ctx.globalAlpha=1; }
+  if(RH.state==="play"){ ctx.fillStyle="rgba(255,255,255,.25)"; ctx.fillRect(0,0,GW*Math.min(1,now/RH_LEN),6); }
+  if(RH.state==="ready") mgTapText(ctx,"눌러서 시작 · 소리를 켜 주세요",260);
+}};
+function renderRhythm(){ if(!RH||RH.state==="over") RH=rhNew();
+  const cv=mgMount("rhythm",`<div><span>점수</span><b id="rhScore">0</b></div><div><span>콤보</span><b id="rhCombo">0</b></div><div><span>최고</span><b id="rhBest">${fmt(mini.rhythmBest||0)}</b></div>`,
+    "떨어지는 발자국이 아래 선에 닿을 때 그 줄을 눌러요. 딱 맞으면 '완벽!'(300점), 조금 빗나가면 '좋아!'(100점). 콤보가 쌓일수록 점수가 커져요. 1분짜리 곡이에요.");
+  if(!cv) return; cv.addEventListener("pointerdown",e=>{ e.preventDefault(); rhTap(mgPt(cv,e).x); }); }
+
+/* ---------- 4. 불꽃 그리기 마법 ---------- */
+const MG_SYMS={h:"─",v:"│",V:"V",A:"Λ",O:"○",Z:"Z"};
+const MG_TPL=(()=>{ const T={}, line=(pts)=>pts;
+  const seg=(a,b,n)=>Array.from({length:n},(_,i)=>[a[0]+(b[0]-a[0])*i/(n-1),a[1]+(b[1]-a[1])*i/(n-1)]);
+  const poly=ps=>ps.slice(1).flatMap((p,i)=>seg(ps[i],p,16));
+  T.h=[poly([[-.5,0],[.5,0]])]; T.v=[poly([[0,-.5],[0,.5]])];
+  T.V=[poly([[-.5,-.5],[0,.5],[.5,-.5]])]; T.A=[poly([[-.5,.5],[0,-.5],[.5,.5]])];
+  T.Z=[poly([[-.5,-.5],[.5,-.5],[-.5,.5],[.5,.5]])];
+  T.O=[]; for(let s=0;s<8;s++) for(const dir of [1,-1]) T.O.push(Array.from({length:48},(_,i)=>{ const a=s/8*Math.PI*2+dir*i/47*Math.PI*2; return [Math.cos(a)*.5,Math.sin(a)*.5]; }));
+  for(const k in T) if(k!=="O") T[k].push(T[k][0].slice().reverse()); return T; })();
+function mgNorm(pts){ // 48개로 고르게 → 가운데로 → 크기 맞추기(가로세로 비율 유지)
+  if(pts.length<2) return null; let L=0; for(let i=1;i<pts.length;i++) L+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]); if(L<20) return null;
+  const N=48, step=L/(N-1), out=[pts[0]]; let acc=0, prev=pts[0];
+  for(let i=1;i<pts.length;i++){ let cur=pts[i], d=Math.hypot(cur[0]-prev[0],cur[1]-prev[1]);
+    while(acc+d>=step&&out.length<N){ const t=(step-acc)/d, q=[prev[0]+t*(cur[0]-prev[0]),prev[1]+t*(cur[1]-prev[1])]; out.push(q); prev=q; d=Math.hypot(cur[0]-prev[0],cur[1]-prev[1]); acc=0; }
+    acc+=d; prev=cur; }
+  while(out.length<N) out.push(pts[pts.length-1]);
+  const xs=out.map(p=>p[0]), ys=out.map(p=>p[1]), cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2, sz=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))||1;
+  return out.map(p=>[(p[0]-cx)/sz,(p[1]-cy)/sz]); }
+function mgRecognize(pts){ const n=mgNorm(pts); if(!n) return null; let best=null,bd=1e9;
+  for(const [k,list] of Object.entries(MG_TPL)) for(const t of list){ let d=0; for(let i=0;i<48;i++){ const q=t[Math.min(t.length-1,Math.round(i*(t.length-1)/47))]; d+=Math.hypot(n[i][0]-q[0],n[i][1]-q[1]); } d/=48; if(d<bd){ bd=d; best=k; } }
+  return bd<0.2?best:null; }
+let MW=null;
+function mwNew(){ return {state:"ready",foes:[],score:0,hearts:3,t:0,next:30,draw:[],trail:null,fire:[],kills:0,last:null}; }
+function mwSpawn(){ const lvl=Math.min(1,MW.t/5400), keys=Object.keys(MG_SYMS), n=1+(Math.random()<lvl*.7?1:0)+(Math.random()<lvl*.35?1:0);
+  MW.foes.push({x:40+Math.random()*(GW-80),y:-30,v:(0.35+lvl*.55)*(0.85+Math.random()*.3),syms:Array.from({length:n},()=>keys[Math.floor(Math.random()*keys.length)]),hurt:0}); }
+function mwCast(k){ MW.last={k,t:0}; let hit=0;
+  for(const f of MW.foes){ if(f.syms[0]===k){ f.syms.shift(); f.hurt=12; hit++; MW.score+=10; MW.fire.push({x:f.x,y:f.y,t:0}); } }
+  const dead=MW.foes.filter(f=>!f.syms.length); MW.kills+=dead.length; MW.score+=dead.length*20; MW.foes=MW.foes.filter(f=>f.syms.length);
+  if(!hit) MW.last.miss=true; mgSet("mwScore",MW.score); }
+function mwEnd(){ MW.state="over"; const fish=miniGiveFish(Math.floor(MW.score/10)*Math.max(1,tapValue()));
+  const nb=MW.score>(mini.magicBest||0); if(nb) mini.magicBest=MW.score; saveMiniAll(); mgSet("mwBest",mini.magicBest||0);
+  mgOver("magic",nb?"최고 기록!":"마을이 위험해요!",MW.score+"점",[`바이킹 ${MW.kills}명을 물리쳤어요`,`${FISH_SVG} 클릭커 물고기 ${fmt(fish)}마리 받았어요`],()=>{ MW=mwNew(); mgSet("mwScore",0); mgSet("mwHeart","♥♥♥"); }); }
+MG_GAMES.magic={step(dt){
+  const ctx=mgCtx($("#magicCanvas"));
+  if(MW.state==="play"){ MW.t+=dt; MW.next-=dt; if(MW.next<=0){ mwSpawn(); MW.next=Math.max(55,170-MW.t/40)*(0.7+Math.random()*.6); }
+    for(const f of MW.foes){ f.y+=f.v*dt; if(f.hurt>0) f.hurt-=dt; }
+    const reached=MW.foes.filter(f=>f.y>560); if(reached.length){ MW.hearts-=reached.length; MW.foes=MW.foes.filter(f=>f.y<=560); mgSet("mwHeart","♥".repeat(Math.max(0,MW.hearts))+"♡".repeat(Math.max(0,3-MW.hearts))); if(MW.hearts<=0) mwEnd(); } }
+  mgSky(ctx,"#2B3A55","#5B6E8C");
+  ctx.fillStyle="#5E8C46"; ctx.fillRect(0,580,GW,GH-580); ctx.fillStyle="#7A4B2A"; for(let x=10;x<GW;x+=70){ ctx.fillRect(x,600,46,34); ctx.fillStyle="#8C3B22"; ctx.beginPath(); ctx.moveTo(x-6,602); ctx.lineTo(x+23,580); ctx.lineTo(x+52,602); ctx.fill(); ctx.fillStyle="#7A4B2A"; }
+  ctx.strokeStyle="rgba(255,90,60,.5)"; ctx.setLineDash([10,8]); ctx.beginPath(); ctx.moveTo(0,560); ctx.lineTo(GW,560); ctx.stroke(); ctx.setLineDash([]);
+  for(const f of MW.foes){ ctx.save(); ctx.translate(f.x,f.y); if(f.hurt>0) ctx.translate((Math.random()-.5)*6,0);
+    if(VIKING_IMG.complete) ctx.drawImage(VIKING_IMG,-22,-22,44,44);
+    ctx.font="bold 20px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    f.syms.forEach((k,i)=>{ const x=(i-(f.syms.length-1)/2)*30; ctx.fillStyle=i===0?"#FFD34D":"rgba(255,255,255,.75)"; ctx.beginPath(); ctx.roundRect(x-13,-52,26,26,7); ctx.fill(); ctx.fillStyle="#1B2430"; ctx.fillText(MG_SYMS[k],x,-38); });
+    ctx.restore(); }
+  MW.fire=MW.fire.filter(p=>(p.t+=dt)<24); for(const p of MW.fire){ const g=ctx.createRadialGradient(p.x,p.y,2,p.x,p.y,30+p.t); g.addColorStop(0,"rgba(255,244,176,.9)"); g.addColorStop(1,"rgba(255,90,40,0)"); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,30+p.t,0,Math.PI*2); ctx.fill(); }
+  if(MW.trail&&MW.trail.length>1){ ctx.strokeStyle="#FFB347"; ctx.lineWidth=8; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.shadowColor="#FF6B2E"; ctx.shadowBlur=14; ctx.beginPath(); MW.trail.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); ctx.shadowBlur=0; }
+  if(MW.last){ MW.last.t+=dt; if(MW.last.t<35){ ctx.globalAlpha=1-MW.last.t/35; ctx.fillStyle=MW.last.miss?"#FF6B5B":"#FFF4B0"; ctx.font="bold 30px sans-serif"; ctx.textAlign="center"; ctx.fillText(MW.last.miss?`${MW.last.k?MG_SYMS[MW.last.k]:"?"} 빗나감`:`${MG_SYMS[MW.last.k]} 불꽃!`,GW/2,520); ctx.globalAlpha=1; } }
+  const tg=ckTarget(); drawRoundImg(ctx,tg&&tg.url,GW/2,650,30,"#22313A");
+  if(MW.state==="ready") mgTapText(ctx,"바이킹 머리 위 모양을 그려요",220);
+}};
+function renderMagic(){ if(!MW||MW.state==="over") MW=mwNew();
+  const cv=mgMount("magic",`<div><span>점수</span><b id="mwScore">${MW.score}</b></div><div><span>마을</span><b id="mwHeart" style="color:#E4572E">${"♥".repeat(MW.hearts)}${"♡".repeat(3-MW.hearts)}</b></div><div><span>최고</span><b id="mwBest">${mini.magicBest||0}</b></div>`,
+    "바이킹 머리 위의 노란 모양(─ │ V Λ ○ Z)을 화면에 손가락으로 그리면 드래곤이 불을 뿜어요. 같은 모양을 가진 바이킹이 한꺼번에 맞아요. 모양을 다 지우면 쓰러져요. 마을 선까지 오면 마을이 다쳐요.");
+  if(!cv) return;
+  cv.addEventListener("pointerdown",e=>{ e.preventDefault(); if(MW.state==="ready"){ MW.state="play"; } if(MW.state!=="play") return; const p=mgPt(cv,e); MW.trail=[[p.x,p.y]]; try{cv.setPointerCapture(e.pointerId);}catch(_){} });
+  cv.addEventListener("pointermove",e=>{ if(!MW.trail) return; const p=mgPt(cv,e); MW.trail.push([p.x,p.y]); });
+  const up=()=>{ if(!MW.trail) return; const k=mgRecognize(MW.trail); MW.trail=null; if(MW.state!=="play") return; if(k) mwCast(k); else MW.last={k:null,t:0,miss:true}; };
+  cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",()=>{ MW.trail=null; }); }
+
+/* ---------- 8. 드래곤 테트리스 ---------- */
+const TT_W=10, TT_H=20, TT_C=29, TT_X=10, TT_Y=10;
+const TT_P={I:[[0,1],[1,1],[2,1],[3,1]],O:[[1,0],[2,0],[1,1],[2,1]],T:[[1,0],[0,1],[1,1],[2,1]],S:[[1,0],[2,0],[0,1],[1,1]],Z:[[0,0],[1,0],[1,1],[2,1]],J:[[0,0],[0,1],[1,1],[2,1]],L:[[2,0],[0,1],[1,1],[2,1]]};
+const TT_COL={I:"#3FA7D6",O:"#F2C14E",T:"#A05CD6",S:"#9BC53D",Z:"#E4572E",J:"#5965D9",L:"#F08A4B"};
+let TT=null;
+function ttBag(){ const b=Object.keys(TT_P); for(let i=b.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]]; } return b; }
+function ttNew(){ const t={state:"ready",grid:Array.from({length:TT_H},()=>Array(TT_W).fill(null)),bag:ttBag(),score:0,lines:0,level:1,drop:0,cur:null,next:null,flash:[]}; t.next=t.bag.pop(); return t; }
+function ttSpawn(){ if(!TT.bag.length) TT.bag=ttBag(); const k=TT.next; TT.next=TT.bag.pop(); TT.cur={k,cells:TT_P[k].map(c=>c.slice()),x:3,y:0};
+  if(!ttFits(TT.cur.cells,TT.cur.x,TT.cur.y)) ttEnd(); }
+function ttFits(cells,x,y){ return cells.every(([cx,cy])=>{ const gx=x+cx, gy=y+cy; return gx>=0&&gx<TT_W&&gy<TT_H&&(gy<0||!TT.grid[gy][gx]); }); }
+function ttMove(dx){ if(TT.state!=="play"||!TT.cur) return; if(ttFits(TT.cur.cells,TT.cur.x+dx,TT.cur.y)) TT.cur.x+=dx; }
+function ttRotate(){ if(TT.state!=="play"||!TT.cur||TT.cur.k==="O") return; const rot=TT.cur.cells.map(([x,y])=>[2-y,x]);
+  for(const kick of [0,-1,1,-2,2]) if(ttFits(rot,TT.cur.x+kick,TT.cur.y)){ TT.cur.cells=rot; TT.cur.x+=kick; return; } }
+function ttLock(){ for(const [cx,cy] of TT.cur.cells){ const gy=TT.cur.y+cy; if(gy<0){ ttEnd(); return; } TT.grid[gy][TT.cur.x+cx]=TT.cur.k; }
+  const full=[]; TT.grid.forEach((row,i)=>{ if(row.every(Boolean)) full.push(i); });
+  if(full.length){ TT.grid=TT.grid.filter((_,i)=>!full.includes(i)); while(TT.grid.length<TT_H) TT.grid.unshift(Array(TT_W).fill(null));
+    TT.lines+=full.length; TT.score+=[0,100,300,500,800][full.length]*TT.level; TT.level=1+Math.floor(TT.lines/10); TT.flash.push({t:0,n:full.length}); }
+  mgSet("ttScore",fmt(TT.score)); mgSet("ttLines",TT.lines); TT.cur=null; ttSpawn(); }
+function ttDown(){ if(TT.state!=="play"||!TT.cur) return; if(ttFits(TT.cur.cells,TT.cur.x,TT.cur.y+1)) TT.cur.y++; else ttLock(); }
+function ttHard(){ if(TT.state!=="play"||!TT.cur) return; let n=0; while(ttFits(TT.cur.cells,TT.cur.x,TT.cur.y+1)){ TT.cur.y++; n++; } TT.score+=n*2; ttLock(); }
+function ttEnd(){ if(TT.state==="over") return; TT.state="over"; const fish=miniGiveFish(Math.floor(TT.score/40)*Math.max(1,tapValue()));
+  const nb=TT.score>(mini.tetrisBest||0); if(nb) mini.tetrisBest=TT.score; saveMiniAll(); mgSet("ttBest",fmt(mini.tetrisBest||0));
+  mgOver("tetris",nb?"최고 기록!":"꽉 찼어요!",fmt(TT.score)+"점",[`${TT.lines}줄 지웠어요 · Lv.${TT.level}`,`${FISH_SVG} 클릭커 물고기 ${fmt(fish)}마리 받았어요`],()=>{ TT=ttNew(); mgSet("ttScore",0); mgSet("ttLines",0); }); }
+const TT_BTN=[{k:"left",x:12,lab:"◀"},{k:"rot",x:92,lab:"⟳"},{k:"right",x:172,lab:"▶"},{k:"down",x:252,lab:"▼"},{k:"hard",x:332,lab:"⤓"}];
+function ttCell(ctx,x,y,k,a){ ctx.globalAlpha=a||1; ctx.fillStyle=TT_COL[k]; ctx.fillRect(x+1,y+1,TT_C-2,TT_C-2); ctx.fillStyle="rgba(255,255,255,.3)"; ctx.fillRect(x+1,y+1,TT_C-2,5); ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x+1,y+TT_C-7,TT_C-2,6); ctx.globalAlpha=1; }
+MG_GAMES.tetris={step(dt){
+  const ctx=mgCtx($("#tetrisCanvas"));
+  if(TT.state==="play"){ if(!TT.cur) ttSpawn(); TT.drop+=dt; const iv=Math.max(4,48-(TT.level-1)*5); if(TT.drop>=iv){ TT.drop=0; ttDown(); } }
+  mgSky(ctx,"#16202B","#26394A");
+  ctx.fillStyle="rgba(255,255,255,.04)"; ctx.fillRect(TT_X,TT_Y,TT_W*TT_C,TT_H*TT_C);
+  ctx.strokeStyle="rgba(255,255,255,.06)"; for(let i=0;i<=TT_W;i++){ ctx.beginPath(); ctx.moveTo(TT_X+i*TT_C,TT_Y); ctx.lineTo(TT_X+i*TT_C,TT_Y+TT_H*TT_C); ctx.stroke(); }
+  TT.grid.forEach((row,y)=>row.forEach((k,x)=>{ if(k) ttCell(ctx,TT_X+x*TT_C,TT_Y+y*TT_C,k); }));
+  if(TT.cur&&TT.state==="play"){ let gy=TT.cur.y; while(ttFits(TT.cur.cells,TT.cur.x,gy+1)) gy++;
+    for(const [cx,cy] of TT.cur.cells){ if(gy+cy>=0) ttCell(ctx,TT_X+(TT.cur.x+cx)*TT_C,TT_Y+(gy+cy)*TT_C,TT.cur.k,.22); }
+    for(const [cx,cy] of TT.cur.cells){ if(TT.cur.y+cy>=0) ttCell(ctx,TT_X+(TT.cur.x+cx)*TT_C,TT_Y+(TT.cur.y+cy)*TT_C,TT.cur.k); } }
+  const sx=TT_X+TT_W*TT_C+10; ctx.fillStyle="#fff"; ctx.font="bold 16px sans-serif"; ctx.textAlign="left"; ctx.fillText("다음",sx,30);
+  if(TT.next) for(const [cx,cy] of TT_P[TT.next]){ ctx.save(); ctx.translate(sx,44); ctx.scale(.7,.7); ttCell(ctx,cx*TT_C,cy*TT_C,TT.next); ctx.restore(); }
+  ctx.fillText("Lv."+TT.level,sx,140); const tg=ckTarget(); drawRoundImg(ctx,tg&&tg.url,sx+42,210,32,"#22313A");
+  TT.flash=TT.flash.filter(f=>(f.t+=dt)<40); for(const f of TT.flash){ ctx.globalAlpha=1-f.t/40; ctx.fillStyle="#FFD34D"; ctx.font="bold 30px sans-serif"; ctx.textAlign="center"; ctx.fillText(["","한 줄!","두 줄!","세 줄!","테트리스!!"][f.n],TT_X+TT_W*TT_C/2,300-f.t); ctx.globalAlpha=1; }
+  for(const b of TT_BTN){ ctx.fillStyle="rgba(255,255,255,.14)"; ctx.beginPath(); ctx.roundRect(b.x,610,72,78,14); ctx.fill(); ctx.fillStyle="#fff"; ctx.font="bold 30px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(b.lab,b.x+36,650); }
+  ctx.textBaseline="alphabetic";
+  if(TT.state==="ready") mgTapText(ctx,"눌러서 시작",260);
+}};
+function renderTetris(){ if(!TT||TT.state==="over") TT=ttNew();
+  const cv=mgMount("tetris",`<div><span>점수</span><b id="ttScore">${fmt(TT.score)}</b></div><div><span>지운 줄</span><b id="ttLines">${TT.lines}</b></div><div><span>최고</span><b id="ttBest">${fmt(mini.tetrisBest||0)}</b></div>`,
+    "떨어지는 블록을 돌리고 옮겨서 가로 한 줄을 꽉 채우면 사라져요. 아래 버튼: ◀ ▶ 옮기기, ⟳ 돌리기, ▼ 한 칸 내리기, ⤓ 바로 떨어뜨리기. 판을 밀어서 옮기거나 톡 눌러 돌릴 수도 있어요. 10줄마다 빨라져요.");
+  if(!cv) return; let st=null, rep=null;
+  const act=k=>{ if(k==="left") ttMove(-1); else if(k==="right") ttMove(1); else if(k==="rot") ttRotate(); else if(k==="down") ttDown(); else if(k==="hard") ttHard(); };
+  cv.addEventListener("pointerdown",e=>{ e.preventDefault(); const p=mgPt(cv,e); if(TT.state==="ready"){ TT.state="play"; return; }
+    const b=p.y>=610&&TT_BTN.find(b=>p.x>=b.x&&p.x<=b.x+72); if(b){ act(b.k); if(b.k!=="hard"&&b.k!=="rot"){ clearInterval(rep); rep=setInterval(()=>act(b.k),110); } return; }
+    st={x:p.x,y:p.y,mx:0,t:performance.now()}; try{cv.setPointerCapture(e.pointerId);}catch(_){} });
+  cv.addEventListener("pointermove",e=>{ if(!st) return; const p=mgPt(cv,e), dx=p.x-st.x-st.mx*TT_C; if(Math.abs(dx)>=TT_C){ const s=Math.sign(dx); ttMove(s); st.mx+=s; } });
+  const up=e=>{ clearInterval(rep); if(!st) return; const p=mgPt(cv,e), dy=p.y-st.y, dt=performance.now()-st.t;
+    if(dy>90&&Math.abs(p.x-st.x)<60) ttHard(); else if(!st.mx&&Math.abs(dy)<12&&dt<300) ttRotate(); st=null; };
+  cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",()=>{ clearInterval(rep); st=null; }); }
+document.addEventListener("keydown",e=>{ if(view!=="click"||mgMode!=="tetris"||!TT||e.target.closest("input,textarea")) return;
+  const m={ArrowLeft:()=>ttMove(-1),ArrowRight:()=>ttMove(1),ArrowUp:ttRotate,ArrowDown:ttDown," ":ttHard}; if(m[e.key]){ e.preventDefault(); m[e.key](); } });
+
+function initG5Cloud(d){ d.doc("settings/tama").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/tama"]&&!s.metadata.hasPendingWrites){ tama=Object.assign({},tama,JSON.parse(JSON.stringify(s.data()||{}))); if(view==="click"&&mgMode==="tama") renderTama(); } },()=>{}); }
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
 
