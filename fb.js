@@ -5,9 +5,9 @@
 (function(){
   "use strict";
   const SHARED_COLL=new Set(["photos","live","petdefs","petphotos","blobs"]);
-  const SHARED_DOC=new Set(["settings/rarity","settings/extras","settings/battle","settings/minidefaults"]);
+  const SHARED_DOC=new Set(["settings/rarity","settings/extras","settings/battle","settings/minidefaults","settings/events"]);
   const BLANK="";
-  let app,auth,fs,user=null,isOwner=false,myName="",readyResolve,readyReject;
+  let app,auth,fs,user=null,isOwner=false,myName="",myBday="",readyResolve,readyReject;
   const ready=new Promise((a,b)=>{ readyResolve=a; readyReject=b; });
   const $=s=>document.querySelector(s);
   const escH=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -116,13 +116,13 @@
   async function afterLogin(u){
     user=u; isOwner=false;
     gate(`<h1>버크 드래곤 도감</h1><p>들어가는 중…</p>`);
-    try{ const a=await fs.doc("content/main/meta/admin").get(); isOwner=true; myName=(a.exists&&a.data().name)||"관리자"; }catch(e){ isOwner=false; }
+    try{ const a=await fs.doc("content/main/meta/admin").get(); isOwner=true; myName=(a.exists&&a.data().name)||"관리자"; myBday=(a.exists&&a.data().bday)||""; }catch(e){ isOwner=false; }
     if(isOwner){ return start(); }
     if(memberUnsub) memberUnsub();
     let asked=null;
     try{ const r=await fs.doc("requests/"+u.uid).get(); asked=r.exists; }catch(e){}
     memberUnsub=fs.doc("content/main/members/"+u.uid).onSnapshot(s=>{
-      if(s.exists){ myName=String((s.data()||{}).name||"").slice(0,20); memberUnsub(); memberUnsub=null; fs.doc("requests/"+u.uid).delete().catch(()=>{}); start(); }
+      if(s.exists){ myName=String((s.data()||{}).name||"").slice(0,20); myBday=String((s.data()||{}).bday||""); memberUnsub(); memberUnsub=null; fs.doc("requests/"+u.uid).delete().catch(()=>{}); start(); }
       else showPending(asked);
     },()=>showPending(asked));
   }
@@ -143,6 +143,9 @@
     watchMembers(cb){ return fs.collection("content/main/members").onSnapshot(s=>cb(s.docs.map(d=>({uid:d.id,...d.data()}))),()=>cb([])); },
     async approve(r){ await fs.doc("content/main/members/"+r.uid).set({name:String(r.name||"").slice(0,20),at:Date.now()}); await fs.doc("requests/"+r.uid).delete(); },
     async deny(uid){ await fs.doc("requests/"+uid).delete(); },
+    async setBday(uid,v){ v=String(v||"").slice(0,5);
+      if(!uid){ await fs.doc("content/main/meta/admin").set({bday:v},{merge:true}); myBday=v; return; }
+      await fs.doc("content/main/members/"+uid).set({bday:v},{merge:true}); },
     async setName(n){ n=String(n||"").trim().slice(0,20); if(!n) return; await fs.doc("content/main/meta/admin").set({name:n,at:Date.now()},{merge:true}); myName=n; },
     async remove(uid){ await fs.doc("content/main/members/"+uid).delete(); },
     async gift(uid,g){ const id="gift-"+Date.now()+"-"+Math.floor(Math.random()*1e6);
@@ -198,7 +201,7 @@
     async record(win){ const ref=fs.doc("arena/"+user.uid); const s=await ref.get(); if(!s.exists) return; const v=s.data();
       await ref.set({name:v.name,team:v.team,power:v.power,wins:Math.floor(v.wins||0)+(win?1:0),losses:Math.floor(v.losses||0)+(win?0:1),at:firebase.firestore.FieldValue.serverTimestamp()}); }
   };
-  window.FB={ publishBlobs, rank, arena, get name(){ return myName; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  window.FB={ publishBlobs, rank, arena, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{

@@ -70,6 +70,45 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .hgrid{align-items:start}
 .hcard:has(details[open]){grid-column:1/-1}
 .hsum,.hdet,.hgo b{word-break:keep-all;overflow-wrap:anywhere}
+.evcard{gap:12px}
+.bankin{display:flex;gap:8px}.bankin input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);font-size:1rem}
+.banklist{display:flex;flex-direction:column;gap:8px}
+.bankrow{display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:color-mix(in srgb,var(--line) 35%,transparent)}
+.bankrow.ripe{background:color-mix(in srgb,#FFD34D 40%,transparent)}
+.bankbar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin:4px 0}.bankbar.big{height:14px}
+.bankbar i{display:block;height:100%;background:linear-gradient(90deg,#D65CA8,#F2C14E)}
+.sphero{display:flex;gap:12px;align-items:center}
+.sptier{display:flex;flex-direction:column;align-items:center;justify-content:center;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle,#2E8B57,#1B5E3A);color:#fff;font-family:var(--display);font-size:2rem;line-height:1;flex:none;box-shadow:0 0 0 4px #E4572E}
+.sptier small{font-size:.7rem}
+.splist{display:flex;flex-direction:column;gap:6px}
+.sprow{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--line) 30%,transparent);opacity:.6}
+.sprow.open{opacity:1;background:color-mix(in srgb,#9BC53D 25%,transparent)}.sprow.got{opacity:.7;background:color-mix(in srgb,var(--line) 30%,transparent)}
+.sprow.special{border:2px solid #E4572E}
+.spn{font-family:var(--display);text-align:center;font-size:1.1rem}.spr{word-break:keep-all}
+.bdayhead{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.bdayhead h2{margin:0}.bdayhead p{margin:0}
+.bdaycake{font-size:4rem;animation:bdbounce 1s ease-in-out infinite}
+@keyframes bdbounce{50%{transform:translateY(-8px) rotate(-4deg)}}
+.bdayopts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bdayopt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 8px;border-radius:16px;border:2px solid #F2C14E;background:color-mix(in srgb,#FFD34D 18%,var(--surface));cursor:pointer;color:inherit}
+.bdayopt span{font-size:2.2rem}.bdayopt b{word-break:keep-all}
+.evcard.bday{background:linear-gradient(180deg,color-mix(in srgb,#FFD34D 25%,var(--surface)),var(--surface) 40%)}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;animation:cfall 2.5s linear forwards}
+@keyframes cfall{to{top:110%;transform:rotate(720deg) translateX(40px)}}
+.admbd{width:6.5em;padding:6px 8px;border-radius:8px;border:1.5px solid var(--line)}
+.bkseason{margin:0;text-align:center;font-size:.9rem}
+.bkmap.season-winter .bkt.land{background:#E8F0F4;box-shadow:inset 0 -4px 0 #C5D6DE}
+.bkmap.season-winter .bkt.land.coast{background:#D9E6EC}
+.bkmap.season-spring .bkt.land{background:#B5D99C;box-shadow:inset 0 -4px 0 #8FB878}
+.bkmap.season-autumn .bkt.land{background:#D9A066;box-shadow:inset 0 -4px 0 #B07A43}
+.bkmap.season-autumn .bkt.land.coast{background:#E3B985}
+.bkmap::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0}
+.bkmap.season-winter::after{opacity:1;background-image:radial-gradient(circle,#fff 1.5px,transparent 2px),radial-gradient(circle,#fff 1px,transparent 1.5px);background-size:40px 40px,25px 25px;animation:bksnow 6s linear infinite}
+.bkmap.season-spring::after{opacity:.9;background-image:radial-gradient(ellipse 3px 2px,#F7B6C9 90%,transparent),radial-gradient(ellipse 2px 3px,#F9C9D8 90%,transparent);background-size:60px 60px,45px 45px;animation:bksnow 9s linear infinite}
+.bkmap.season-autumn::after{opacity:.9;background-image:radial-gradient(ellipse 3px 2px,#E4572E 90%,transparent),radial-gradient(ellipse 2px 3px,#F2C14E 90%,transparent);background-size:70px 70px,50px 50px;animation:bksnow 10s linear infinite}
+@keyframes bksnow{from{background-position:0 0,0 0}to{background-position:20px 200px,-15px 150px}}
+@media (prefers-reduced-motion:reduce){.bkmap::after,.bdaycake,.confetti i{animation:none}}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{

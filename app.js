@@ -189,7 +189,7 @@ async function initCloud(){
     d.doc("settings/rarity").onSnapshot(s=>{ if(s.exists){ const v=s.data()||{}; rarity=JSON.parse(JSON.stringify(v.map||{})); if(v.odds) odds=Object.assign({},ODDS0,v.odds); if(view==="fortune") renderFortune(); } },()=>{});
     d.collection("petdefs").onSnapshot(s=>{ petDefs=s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); if(view==="fortune") renderFortune(); },()=>{});
     d.collection("petphotos").onSnapshot(s=>{ petPhotos=s.docs.map(x=>({id:x.id,...x.data()})); if(view==="fortune") renderFortune(); },()=>{});
-    initBattleCloud(d); initClickCloud(d); initSuikaCloud(d); initMiniCloud(d); initBerkCloud(d);
+    initBattleCloud(d); initClickCloud(d); initSuikaCloud(d); initMiniCloud(d); initBerkCloud(d); initEventsCloud(d);
     await initPurse(d);
     initTally(d);
     d.doc("settings/extras").onSnapshot(s=>{ if(s.exists){ extras=JSON.parse(JSON.stringify((s.data()||{}).map||{})); rerender(); } },()=>{});
@@ -637,7 +637,7 @@ let gemFrac=0;
 function addGems(n,why,quiet){
   const m=r2(gainMult(why)); const total=n*m+gemFrac; n=Math.floor(total+1e-9); gemFrac=total-n;
   if(n<=0) return;
-  bump("gems",n);
+  bump("gems",n); spXP(why==="quiz"?5:10);
   const gb=$("#gemBig"), gm=$("#gemMeter"); if(gb) gb.textContent=fmt(gems); if(gm) gm.style.width=Math.min(100,gems/COST*100)+"%";
   const el=document.createElement("div"); el.className="plus"; el.innerHTML=`<svg class="gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z" fill="var(--gem)"/><path d="M2 9h20M8 3l4 18 4-18M6 3l2 6m10-6-2 6" stroke="rgba(255,255,255,.55)" stroke-width="1.2" fill="none"/></svg> +${fmt(n)}${m>1?`<small class="xm">×${m}</small>`:""}`; el.setAttribute("aria-live","polite");
   if(quiet) el.classList.add("mini");
@@ -681,7 +681,7 @@ async function hatch(opt){
   if(gems<COST){ toast(`보석이 ${fmt(COST-gems)}개 더 필요해요`); return; }
   const rec=drawOne(); if(!rec){ toast("사진이 있는 드래곤이 없어요"); return; }
   rec.isNew=!hasPull(rec.speciesId);
-  bump("gems",-COST);
+  bump("gems",-COST); spXP(3);
   fz.hatching=true;
   const egg=silent?null:$("#egg"); const still=silent||matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(egg){ egg.classList.add("t-"+rec.tier); }
@@ -1439,6 +1439,7 @@ async function playerTurn(kind,switchTo){
 }
 function autoStep(){ if(!bt||!bt.auto||bt.busy||bt.done) return; const u=cur("me"); playerTurn(u.charge>=u.sk.cd?"special":"attack"); }
 function finish(win){
+  spXP(win?15:5);
   if(bt&&bt.pvp) return pvpFinish(win);
   const n=bt.n, first=win&&n>bprog.cleared; let reward=0, ticket=false;
   if(win){ reward=Math.round(rewardOf(n,first)*(1+rsum("coin_pct")/100)); bump("coins",reward);
@@ -1982,7 +1983,7 @@ function initMiniCloud(d){
   d.doc("settings/minis").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/minis"]&&!s.metadata.hasPendingWrites){
     mini=Object.assign({flyBest:0,hideBest:0},JSON.parse(JSON.stringify(s.data()||{}))); } },()=>{});
 }
-function miniGiveFish(n){ n=Math.floor(n); if(n<=0) return 0; ck.fish=(ck.fish||0)+n; saveCkAll(); return n; }
+function miniGiveFish(n){ n=Math.floor(n); if(n<=0) return 0; spXP(20); ck.fish=(ck.fish||0)+n; saveCkAll(); return n; }
 const imgCache={};
 function imgOf(url){ if(!url) return null; if(!imgCache[url]){ const im=new Image(); im.src=url; imgCache[url]=im; } return imgCache[url]; }
 function drawRoundImg(ctx,url,x,y,r,fallback){
@@ -2547,8 +2548,20 @@ const BK_B={
   arena:{name:"드래곤 경기장",ico:"🏟️",cost:8000,rate:30,need:"hall",desc:"옆에 붙은 드래곤 우리 하나마다 +15%."},
   tree:{name:"소나무",ico:"🌲",cost:15,rate:0,deco:true,desc:"꾸미기. 꾸미기 하나마다 마을 전체 +2% (최대 +30%)."},
   torch:{name:"횃불",ico:"🔥",cost:40,rate:0,deco:true,desc:"꾸미기. 밤이 되면 환하게 빛나요. 마을 전체 +2%."},
-  statue:{name:"투슬리스 동상",ico:"🗿",cost:20000,rate:0,unique:true,need:"arena",desc:"버크의 자랑. 마을 전체 +25%."}
+  statue:{name:"투슬리스 동상",ico:"🗿",cost:20000,rate:0,unique:true,need:"arena",desc:"버크의 자랑. 마을 전체 +25%."},
+  spring_statue:{name:"벚꽃 라이트 퓨리 동상",ico:"🌸",cost:8000,rate:0,unique:true,season:"spring",bonus:0.1,desc:"봄에만 지을 수 있는 계절 동상. 한 번 지으면 계속 남아요. 마을 전체 +10% (레벨마다 더)."},
+  summer_statue:{name:"해변 그롱클 동상",ico:"🏖️",cost:8000,rate:0,unique:true,season:"summer",bonus:0.1,desc:"여름에만 지을 수 있는 계절 동상. 한 번 지으면 계속 남아요. 마을 전체 +10% (레벨마다 더)."},
+  autumn_statue:{name:"단풍 스톰플라이 동상",ico:"🍁",cost:8000,rate:0,unique:true,season:"autumn",bonus:0.1,desc:"가을에만 지을 수 있는 계절 동상. 한 번 지으면 계속 남아요. 마을 전체 +10% (레벨마다 더)."},
+  winter_statue:{name:"눈사람 투슬리스 동상",ico:"⛄",cost:8000,rate:0,unique:true,season:"winter",bonus:0.1,desc:"겨울에만 지을 수 있는 계절 동상. 한 번 지으면 계속 남아요. 마을 전체 +10% (레벨마다 더)."},
+  xmas_tree:{name:"크리스마스 트리",ico:"🎄",cost:5000,rate:0,unique:true,reward:true,bonus:0.05,desc:"크리스마스 시즌 패스 10단계 보상. 마을 전체 +5% (레벨마다 더)."},
+  santa_statue:{name:"산타 투슬리스 동상",ico:"🎅",cost:20000,rate:0,unique:true,reward:true,bonus:0.2,desc:"크리스마스 시즌 패스 30단계 보상. 마을 전체 +20% (레벨마다 더)."}
 };
+const SEASON_KO={spring:"봄",summer:"여름",autumn:"가을",winter:"겨울"};
+function bkLock(k){ const B=BK_B[k];
+  if(B.unique&&bkHas(k)) return "이미 있어요"; if(B.need&&!bkHas(B.need)) return BK_B[B.need].name+" 필요";
+  if(B.season&&B.season!==bkSeason()) return SEASON_KO[B.season]+"에만";
+  if(B.reward&&!((bk.inv||{})[k]>0)) return "시즌 패스 보상"; return ""; }
+function bkStatueMult(){ let m=1; for(const t of Object.values(bk.tiles)){ const B=BK_B[t.k]; if(B&&B.bonus) m*=1+B.bonus*(1+0.5*((t.lv||1)-1)); } return m; }
 const BK_MAXLV=5;
 let bk={tiles:{},bank:0,last:Date.now(),total:0};
 const saveBk=makeSaver("settings/berk",()=>bk);
@@ -2563,7 +2576,7 @@ function bkCoast(r,c){ return bkN4(r,c).some(([a,b])=>!bkLand(a,b)); }
 function bkHas(k){ return Object.values(bk.tiles).some(t=>t.k===k); }
 function bkLvMult(lv){ return 1+0.6*((lv||1)-1); }
 function bkGlobal(){ const ts=Object.values(bk.tiles); const hall=ts.find(t=>t.k==="hall"); const deco=ts.filter(t=>BK_B[t.k].deco).length;
-  return (1+(hall?0.1*(hall.lv||1):0))*(1+Math.min(0.3,deco*0.02))*(bkHas("statue")?1.25:1); }
+  return (1+(hall?0.1*(hall.lv||1):0))*(1+Math.min(0.3,deco*0.02))*(bkHas("statue")?1.25:1)*bkStatueMult(); }
 function bkTileRate(r,c){ const t=bkAt(r,c); if(!t) return 0; const B=BK_B[t.k]; let v=B.rate;
   const nb=bkN4(r,c).map(([a,b])=>bkAt(a,b)).filter(Boolean);
   if(t.k==="house"&&nb.some(n=>n.k==="hall")) v*=1.3;
@@ -2572,7 +2585,7 @@ function bkTileRate(r,c){ const t=bkAt(r,c); if(!t) return 0; const B=BK_B[t.k];
   if(t.k==="stable"&&t.dragon){ v+={common:0,rare:5,epic:12,legend:30}[tierOf(t.dragon)]||0; }
   if(t.k==="arena") v*=1+0.15*nb.filter(n=>n.k==="stable").length;
   v*=1+0.25*nb.filter(n=>n.k==="forge").length;
-  return v*bkLvMult(t.lv); }
+  return v*bkLvMult(t.lv)*seasonMult(t.k); }
 function bkRate(){ let s=0; for(const key in bk.tiles){ const [r,c]=key.split(",").map(Number); s+=bkTileRate(r,c); } return s*bkGlobal(); } // 1분에 모으는 물고기
 function bkPending(){ const mins=Math.min(BK_CAP,Math.max(0,(Date.now()-(bk.last||Date.now()))/60000)); return (bk.bank||0)+bkRate()*mins; }
 function bkBankNow(){ bk.bank=bkPending(); bk.last=Date.now(); } // 건물이 바뀌기 전에 지금까지 모은 걸 저장
@@ -2581,9 +2594,9 @@ function bkCollect(){ const n=Math.floor(bkPending()); if(n<=0){ toast("아직 �
   bkBankNow(); bk.bank-=n; bk.total=(bk.total||0)+n; miniGiveFish(n); saveBkAll(); toast(`물고기 ${fmt(n)}마리를 걷었어요`); bkRefresh(); renderBerkPanel(); }
 function bkUpCost(t){ return Math.round(BK_B[t.k].cost*Math.pow(2,t.lv||1)); }
 function bkBuild(k){ const B=BK_B[k], [r,c]=bkSel;
-  if((ck.fish||0)<B.cost){ toast("물고기가 모자라요"); return; }
-  if(B.unique&&bkHas(k)){ toast("하나만 지을 수 있어요"); return; } if(B.need&&!bkHas(B.need)){ toast(`${BK_B[B.need].name}이(가) 먼저 있어야 해요`); return; }
-  bkBankNow(); ck.fish-=B.cost; saveCkAll(); bk.tiles[r+","+c]={k,lv:1}; saveBkAll(); toast(`${B.name}을(를) 지었어요!`); renderBerk(); }
+  const lk=bkLock(k); if(lk){ toast(lk==="이미 있어요"?"하나만 지을 수 있어요":lk); return; }
+  if(!B.reward&&(ck.fish||0)<B.cost){ toast("물고기가 모자라요"); return; }
+  bkBankNow(); if(B.reward){ bk.inv=Object.assign({},bk.inv); bk.inv[k]--; } else { ck.fish-=B.cost; saveCkAll(); } bk.tiles[r+","+c]={k,lv:1}; saveBkAll(); toast(`${B.name}을(를) 지었어요!`); renderBerk(); }
 function bkUpgrade(){ const [r,c]=bkSel, t=bkAt(r,c); if(!t||(t.lv||1)>=BK_MAXLV) return; const cost=bkUpCost(t);
   if((ck.fish||0)<cost){ toast("물고기가 모자라요"); return; }
   bkBankNow(); ck.fish-=cost; saveCkAll(); t.lv=(t.lv||1)+1; saveBkAll(); toast(`${BK_B[t.k].name} Lv.${t.lv}!`); renderBerk(); }
@@ -2594,7 +2607,7 @@ function bkNight(){ const h=new Date().getHours(); return h>=19||h<6; }
 function bkRefresh(){ mgSet("bkRate",fmt(Math.round(bkRate()*10)/10)); mgSet("bkPend",fmt(Math.floor(bkPending()))); mgSet("bkFish",fmt(ck.fish||0));
   const full=bkPending()>=bkRate()*BK_CAP-0.5&&bkRate()>0; const w=$("#bkFull"); if(w) w.hidden=!full;
   const f=ck.fish||0;
-  document.querySelectorAll("[data-bkbuild]").forEach(b=>{ const B=BK_B[b.dataset.bkbuild]; const lock=(B.unique&&bkHas(b.dataset.bkbuild))||(B.need&&!bkHas(B.need)); b.disabled=!!lock||f<B.cost; });
+  document.querySelectorAll("[data-bkbuild]").forEach(b=>{ const B=BK_B[b.dataset.bkbuild]; const lock=bkLock(b.dataset.bkbuild); b.disabled=!!lock||(!B.reward&&f<B.cost); });
   const up=$("#bkUp"); if(up&&bkSel){ const t=bkAt(bkSel[0],bkSel[1]); if(t) up.disabled=f<bkUpCost(t); } }
 function renderBerk(){
   const el=$("#clickView"); if(!el) return;
@@ -2605,7 +2618,8 @@ function renderBerk(){
   el.innerHTML=mgTabsHtml()+`<div class="skwrap">
     <div class="skhud"><div><span>1분에</span><b>${FISH_SVG}<span id="bkRate"></span></b></div><div><span>모인 물고기</span><b id="bkPend">0</b></div><button class="btn small" id="bkCollect">걷기</button></div>
     <p class="note bkfull" id="bkFull" hidden>창고가 꽉 찼어요! 걷어야 더 모여요 (최대 8시간).</p>
-    <div class="bkmap ${bkNight()?"night":""}" id="bkMap" style="--c:${BK_C}">${cells.join("")}<div class="bkvisit" id="bkVisit" hidden></div></div>
+    <p class="bkseason">${SEASON_INFO[bkSeason()].ico} 지금은 <b>${SEASON_INFO[bkSeason()].name}</b> · ${SEASON_INFO[bkSeason()].bonus}${bkSeason()==="winter"||bkSeason()==="autumn"?"":""}</p>
+    <div class="bkmap ${bkNight()?"night":""} season-${bkSeason()}" id="bkMap" style="--c:${BK_C}">${cells.join("")}<div class="bkvisit" id="bkVisit" hidden></div></div>
     <div class="bkpanel" id="bkPanel"></div>
     <p class="note" style="margin:0;text-align:center">가진 물고기 ${FISH_SVG}<b id="bkFish">${fmt(ck.fish||0)}</b> · 지금까지 걷은 물고기 ${fmt(bk.total||0)}마리<br>앱을 꺼 둬도 최대 8시간 동안 모여요. 가끔 날아오는 야생 드래곤을 누르면 선물을 줘요.</p></div>`;
   bindMgTabs();
@@ -2621,9 +2635,9 @@ function renderBerkPanel(){
   const [r,c]=bkSel, t=bkAt(r,c);
   if(!bkLand(r,c)){ p.innerHTML=`<p class="note" style="margin:0">바다예요. 여기는 지을 수 없어요.</p>`; return; }
   if(!t){
-    p.innerHTML=`<p class="bkh">빈 땅${bkCoast(r,c)?" · 바닷가":""}</p><div class="bkshop">${Object.entries(BK_B).map(([k,B])=>{ const lock=(B.unique&&bkHas(k))?"이미 있어요":(B.need&&!bkHas(B.need))?BK_B[B.need].name+" 필요":"";
+    p.innerHTML=`<p class="bkh">빈 땅${bkCoast(r,c)?" · 바닷가":""}</p><div class="bkshop">${Object.entries(BK_B).map(([k,B])=>{ const lock=bkLock(k);
       return `<div class="bkitem ${lock?"lock":""}"><span class="bkico">${B.ico}</span><div><b>${B.name}</b><p class="note" style="margin:0">${B.desc}</p></div>
-        <button class="btn small fishbtn" data-bkbuild="${k}" ${lock||(ck.fish||0)<B.cost?"disabled":""}>${lock||`${FISH_SVG}${fmt(B.cost)}`}</button></div>`; }).join("")}</div>`;
+        <button class="btn small fishbtn" data-bkbuild="${k}" ${lock||(!B.reward&&(ck.fish||0)<B.cost)?"disabled":""}>${lock||(B.reward?"선물로 짓기":`${FISH_SVG}${fmt(B.cost)}`)}</button></div>`; }).join("")}</div>`;
     p.querySelectorAll("[data-bkbuild]").forEach(b=>b.onclick=()=>bkBuild(b.dataset.bkbuild)); return; }
   const B=BK_B[t.k], lv=t.lv||1, rate=bkTileRate(r,c)*bkGlobal(), own=ckOwned();
   p.innerHTML=`<p class="bkh"><span class="bkico">${B.ico}</span> ${B.name} <span class="clv2">Lv.${lv}</span></p>
@@ -2653,6 +2667,11 @@ function admPaint(){ const box=$("#adminPanel"); if(!box) return;
     <div class="admsec"><h3>승인 요청 <span id="admReqN"></span></h3><div id="admReqs"></div></div>
     <div class="admsec"><h3 id="admMemH">멤버</h3><div id="admMems"></div></div>
     <div class="admsec"><h3>랭킹에 보일 내 이름</h3><div class="admrow"><input id="agName" maxlength="20" autocomplete="off" style="flex:1;min-width:8em;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line)"><button class="btn small" id="agNameGo">저장</button></div></div>
+    <div class="admsec"><h3>내 생일</h3><div class="admrow"><input id="agBday" maxlength="5" placeholder="MM-DD" class="admbd"><button class="btn small" id="agBdayGo">저장</button></div></div>
+    <div class="admsec"><h3>생일 선물 (멤버가 생일날 하나 골라요)</h3>
+      <div class="admgift"><label class="fxf"><span>펫 뽑기권</span><input id="ebT" type="number" min="0"></label><label class="fxf"><span>보석</span><input id="ebG" type="number" min="0"></label>
+        <label class="fxf"><span>코인</span><input id="ebC" type="number" min="0"></label><label class="fxf"><span>물고기</span><input id="ebF" type="number" min="0"></label></div>
+      <label class="fxf" style="width:100%"><span>축하 메시지</span><input id="ebMsg" maxlength="80" style="width:100%"></label><button class="btn small" id="ebGo">생일 선물 저장</button></div>
     <div class="admsec"><h3>선물 주기</h3>
       <div class="admgift"><label class="fxf"><span>누구에게</span><select id="agWho"></select></label>
         <label class="fxf"><span>보석</span><input id="agGems" type="number" inputmode="numeric" min="0" value="0"></label>
@@ -2669,14 +2688,20 @@ function admPaint(){ const box=$("#adminPanel"); if(!box) return;
     try{ const txt=await f.text(); const n=await FB.admin.importData(txt,(i,t)=>{ m.textContent=` 옮기는 중… ${i}/${t}`; }); m.textContent=` 다 옮겼어요 (${n}개). 다시 여는 중…`; setTimeout(()=>location.reload(),1500); }
     catch(err){ m.textContent=" "+(err&&err.message||"가져오지 못했어요"); } };
   $("#agOut").onclick=()=>FB.signOut();
+  $("#agBday").value=FB.bday||""; $("#agBdayGo").onclick=async()=>{ const v=$("#agBday").value.trim(); if(v&&!/^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(v)){ toast("12-25처럼 넣어 주세요"); return; } try{ await FB.admin.setBday("",v); toast("저장했어요"); }catch(e){ toast("저장하지 못했어요"); } };
+  { const b=evCfg.bday||{}; $("#ebT").value=b.tickets||0; $("#ebG").value=b.gems||0; $("#ebC").value=b.coins||0; $("#ebF").value=b.fish||0; $("#ebMsg").value=evCfg.msg||""; }
+  $("#ebGo").onclick=async()=>{ const n=id=>Math.max(0,Math.floor(+$(id).value||0)); const cfg={bday:{tickets:n("#ebT"),gems:n("#ebG"),coins:n("#ebC"),fish:n("#ebF")},msg:$("#ebMsg").value.trim().slice(0,80)};
+    try{ await cloud.db.doc("settings/events").set(cfg); toast("생일 선물을 저장했어요"); }catch(e){ toast("저장하지 못했어요"); } };
   $("#agName").value=FB.name||""; $("#agNameGo").onclick=async()=>{ try{ await FB.admin.setName($("#agName").value); toast("이름을 저장했어요. 다음 기록부터 이 이름으로 올라가요"); }catch(e){ toast("저장하지 못했어요"); } }; }
   $("#admReqN").innerHTML=adm.reqs.length?`<span class="badge">${adm.reqs.length}</span>`:"";
   $("#admReqs").innerHTML=adm.reqs.length?adm.reqs.map(r=>`<div class="admrow"><b>${esc(r.name||"이름 없음")}</b><span class="note">${new Date(r.at||0).toLocaleString("ko-KR")}</span>
         <button class="btn small" data-aok="${esc(r.uid)}">승인</button><button class="btn ghost small" data-ano="${esc(r.uid)}">거절</button></div>`).join(""):`<p class="note" style="margin:0">새 요청이 없어요.</p>`;
   $("#admMemH").textContent=`멤버 ${adm.mems.length}명`;
-  $("#admMems").innerHTML=adm.mems.map(m=>`<div class="admrow"><b>${esc(m.name||"이름 없음")}</b><button class="btn ghost small" data-arm="${esc(m.uid)}">${adm.busy==="rm:"+m.uid?"한 번 더 누르면 빼기":"빼기"}</button></div>`).join("")||`<p class="note" style="margin:0">아직 멤버가 없어요.</p>`;
+  $("#admMems").innerHTML=adm.mems.map(m=>`<div class="admrow"><b>${esc(m.name||"이름 없음")}</b><input class="admbd" data-abd="${esc(m.uid)}" value="${esc(m.bday||"")}" placeholder="생일 MM-DD" maxlength="5" aria-label="${esc(m.name||"")} 생일"><button class="btn ghost small" data-arm="${esc(m.uid)}">${adm.busy==="rm:"+m.uid?"한 번 더 누르면 빼기":"빼기"}</button></div>`).join("")||`<p class="note" style="margin:0">아직 멤버가 없어요.</p>`;
   const sel=$("#agWho"), keepV=sel.value;
   sel.innerHTML=[`<option value="">나 (관리자)</option>`,...adm.mems.map(m=>`<option value="${esc(m.uid)}">${esc(m.name||"이름 없음")}</option>`)].join(""); if([...sel.options].some(o=>o.value===keepV)) sel.value=keepV;
+  box.querySelectorAll("[data-abd]").forEach(i=>i.onchange=async()=>{ const v=i.value.trim(); if(v&&!/^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(v)){ toast("생일은 12-25처럼 월-일로 넣어 주세요"); return; }
+    try{ await FB.admin.setBday(i.dataset.abd,v); toast(v?"생일을 저장했어요":"생일을 지웠어요"); }catch(e){ toast("저장하지 못했어요"); } });
   box.querySelectorAll("[data-aok]").forEach(b=>b.onclick=async()=>{ const r=adm.reqs.find(x=>x.uid===b.dataset.aok); b.disabled=true; try{ await FB.admin.approve(r); toast(`${r.name}님을 승인했어요`); }catch(e){ toast("승인하지 못했어요"); b.disabled=false; } });
   box.querySelectorAll("[data-ano]").forEach(b=>b.onclick=async()=>{ b.disabled=true; try{ await FB.admin.deny(b.dataset.ano); }catch(e){ b.disabled=false; } });
   box.querySelectorAll("[data-arm]").forEach(b=>b.onclick=async()=>{ const k="rm:"+b.dataset.arm; if(adm.busy!==k){ adm.busy=k; admPaint(); setTimeout(()=>{ if(adm.busy===k){ adm.busy=""; admPaint(); } },3000); return; } adm.busy=""; try{ await FB.admin.remove(b.dataset.arm); toast("멤버에서 뺐어요"); }catch(e){ toast("빼지 못했어요"); } });
@@ -2954,6 +2979,20 @@ function pvpResult(el){ const d=bt.done, nm=esc(bt.pvp.name);
 
 // ---------- 홈: 접속하면 처음 보이는 화면. 큰 아이콘으로 고르고, 기능마다 자세한 설명을 볼 수 있어요 ----------
 const HOME_SECTIONS=[
+ {title:"이벤트",items:[
+  {id:"season",ico:"🎄",col:"#2E8B57",name:"크리스마스 시즌 패스",sum:"놀면서 경험치 모아 단계별 선물 받기",go:()=>openSeason(),
+   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 100마다 한 단계씩 올라요. 모두 30단계예요.</p>
+   <ul><li>경험치: 매일 첫 접속 +50, 퀴즈 정답 +5, 미니게임 한 판 +20, 전투 승리 +15, 드래곤 뽑기 +3 등.</li>
+   <li>단계마다 보석, 코인, 물고기, 펫 뽑기권을 받아요. 5단계마다 펫 뽑기권이에요.</li>
+   <li><b>10단계</b>에는 버크에 놓을 <b>크리스마스 트리</b>, <b>30단계</b>에는 <b>산타 투슬리스 동상</b>을 줘요.</li>
+   <li>급하면 <b>보석 1,000개</b>로 한 단계를 건너뛸 수 있어요.</li>
+   <li>받은 단계는 '받기'를 눌러야 들어와요.</li></ul>`},
+  {id:"bank",ico:"🐷",col:"#D65CA8",name:"보석 저금통",sum:"보석을 맡기면 7일 뒤 이자가 붙어요",go:()=>openBank(),
+   det:`<p>보석을 맡겨 두면 <b>7일 뒤에 10% 이자</b>를 붙여서 돌려줘요. 1,000개를 맡기면 1,100개가 돼요.</p>
+   <ul><li>여러 번 나눠서 맡길 수 있고, 각각 따로 7일을 세요.</li>
+   <li>7일 전에 찾으면 이자 없이 맡긴 만큼만 돌려줘요.</li>
+   <li>참고 기다리면 더 많아진다는 걸 배우는 저축 연습이에요.</li></ul>`},
+ ]},
  {title:"드래곤 도감",items:[
   {id:"quiz",ico:"🧩",col:"#3FA7D6",name:"드래곤 퀴즈",sum:"사진을 보고 드래곤 이름 맞히기",go:()=>show("quiz"),
    det:`<p>드래곤 사진이 한 장씩 나오면 그 드래곤의 이름을 써서 맞혀요.</p>
@@ -3005,7 +3044,8 @@ const HOME_SECTIONS=[
  ]},
  {title:"미니게임",items:[
   {id:"berk",ico:"🏝️",col:"#4CB944",name:"버크 만들기",sum:"건물을 지어 나만의 마을 키우기",go:()=>goMini("berk"),
-   det:`<p>버크 섬 지도의 땅을 눌러 <b>물고기</b>로 건물을 지어요. 건물은 <b>1분마다 물고기를 모아</b> 줘요.</p>
+   det:`<p><b>계절</b>이 바뀌면 마을 모습과 보너스가 바뀌어요. 봄엔 양 목장, 여름엔 어부 오두막, 가을엔 모든 건물, 겨울엔 바이킹 집이 더 많이 모아요.
+   계절마다 그 계절에만 지을 수 있는 <b>계절 동상</b>이 있어요. 한 번 지으면 계속 남아서 마을 전체 생산을 올려 줘요. (라이즈 오브 버크처럼!)</p><p>버크 섬 지도의 땅을 눌러 <b>물고기</b>로 건물을 지어요. 건물은 <b>1분마다 물고기를 모아</b> 줘요.</p>
    <ul><li>앱을 꺼 둬도 최대 8시간 동안 쌓여요. <b>걷기</b>를 누르면 물고기가 들어와요.</li>
    <li>어부 오두막은 바닷가에 지으면 2배, 양 목장은 집 옆에 있으면 더 많이 모아요. <b>어디에 짓느냐</b>가 중요해요.</li>
    <li>드래곤 우리에 뽑은 드래곤을 넣으면 등급만큼 더 모아요.</li>
@@ -3095,9 +3135,119 @@ function renderHome(){
       return `<section class="hsec"><h2>${sec.title}</h2><div class="hgrid">${items.map(it=>`<div class="hcard" style="--hc:${it.col}">
         <button class="hgo" data-hgo="${it.id}"><span class="hico" aria-hidden="true">${it.ico}</span><b>${it.name}</b><span class="hsum">${it.sum}</span></button>
         <details class="hdet"><summary>자세히 보기</summary>${it.det}</details></div>`).join("")}</div></section>`; }).join("")}
+    <p class="note" style="text-align:center">생일에 접속하면 축하 선물을 고를 수 있어요 🎂 (생일은 관리자가 넣어 줘요)</p>
     <p class="note" style="text-align:center">아래 탭이나 각 화면에서 언제든 <b>홈</b>으로 돌아올 수 있어요.</p></div>`;
   const all=HOME_SECTIONS.flatMap(s=>s.items);
   el.querySelectorAll("[data-hgo]").forEach(b=>b.onclick=()=>{ const it=all.find(x=>x.id===b.dataset.hgo); if(it) it.go(); });
+}
+
+// ===================== 이벤트: 계절, 저금통, 생일, 시즌 패스 =====================
+const KST=()=>new Date(Date.now()+9*3600e3); // 한국 시간 기준 (getUTC* 로 읽어요)
+const dayKey=(d=KST())=>d.toISOString().slice(0,10);
+const mmdd=(d=KST())=>d.toISOString().slice(5,10);
+function giveAll(g){ // 보상 주기 (물고기는 시즌 경험치 없이 직접)
+  if(g.gems) bump("gems",Math.floor(g.gems)); if(g.coins) bump("coins",Math.floor(g.coins)); if(g.tickets) bump("tickets",Math.floor(g.tickets));
+  if(g.fish){ ck.fish=(ck.fish||0)+Math.floor(g.fish); saveCkAll(); }
+  if(g.bk){ bk.inv=bk.inv||{}; bk.inv[g.bk]=(bk.inv[g.bk]||0)+1; saveBkAll(); }
+  updateTop(); }
+const giftText=g=>[g.gems&&`보석 ${fmt(g.gems)}개`,g.coins&&`코인 ${fmt(g.coins)}개`,g.fish&&`물고기 ${fmt(g.fish)}마리`,g.tickets&&`펫 뽑기권 ${g.tickets}장`,g.bk&&`버크 건물 '${BK_B[g.bk].name}'`].filter(Boolean).join(", ");
+// 공용 시트(아래에서 올라오는 창)
+function openSheet(html,bind,cls){ let m=$("#evSheet"); if(!m){ m=document.createElement("div"); m.id="evSheet"; m.className="rankmodal"; document.body.appendChild(m); }
+  m.hidden=false; document.body.classList.add("skfull");
+  m.innerHTML=`<div class="rkcard evcard ${cls||""}" role="dialog">${html}</div>`;
+  const close=()=>{ m.hidden=true; if(!(typeof mgFull!=="undefined"&&mgFull)) document.body.classList.remove("skfull"); if(view==="home") renderHome(); };
+  m.onclick=e=>{ if(e.target===m) close(); }; m.querySelectorAll("[data-evclose]").forEach(b=>b.onclick=close);
+  bind&&bind(m,close); return close; }
+function confetti(){ const box=document.createElement("div"); box.className="confetti"; const cols=["#E4572E","#F2C14E","#3FA7D6","#9BC53D","#A05CD6","#FFD34D"];
+  box.innerHTML=Array.from({length:60},(_,i)=>`<i style="left:${Math.random()*100}%;background:${cols[i%cols.length]};animation-delay:${Math.random()*0.8}s;animation-duration:${2+Math.random()*1.5}s;transform:rotate(${Math.random()*360}deg)"></i>`).join("");
+  document.body.appendChild(box); setTimeout(()=>box.remove(),4200); }
+
+/* ---------- 21. 버크 계절 ---------- */
+function bkSeason(){ const m=KST().getUTCMonth()+1; return m>=3&&m<=5?"spring":m>=6&&m<=8?"summer":m>=9&&m<=11?"autumn":"winter"; }
+const SEASON_INFO={spring:{name:"봄",ico:"🌸",bonus:"양 목장 +20%",k:"farm"},summer:{name:"여름",ico:"☀️",bonus:"어부 오두막 +20%",k:"fishery"},
+  autumn:{name:"가을",ico:"🍁",bonus:"모든 건물 +10%",k:"*"},winter:{name:"겨울",ico:"❄️",bonus:"바이킹 집 +20%",k:"house"}};
+function seasonMult(k){ const s=SEASON_INFO[bkSeason()]; if(s.k==="*") return 1.1; return s.k===k?1.2:1; }
+
+/* ---------- 25. 보석 저금통: 7일 맡기면 10% 이자 ---------- */
+let bank={deps:[]}; const saveBank=makeSaver("settings/bank",()=>bank);
+const BANK_DAYS=7, BANK_RATE=0.10, BANK_MIN=10;
+function bankDeposit(n){ n=Math.floor(+n||0); if(n<BANK_MIN){ toast(`보석 ${BANK_MIN}개부터 맡길 수 있어요`); return false; } if(gems<n){ toast("보석이 모자라요"); return false; }
+  bump("gems",-n); bank.deps=[...(bank.deps||[]),{amt:n,at:Date.now(),id:Date.now()+"-"+Math.floor(Math.random()*1e6)}]; saveBank(); spXP(10); return true; }
+function bankTake(id){ const d=(bank.deps||[]).find(x=>x.id===id); if(!d) return; const ripe=Date.now()-d.at>=BANK_DAYS*864e5;
+  const back=ripe?Math.floor(d.amt*(1+BANK_RATE)):d.amt; bank.deps=bank.deps.filter(x=>x.id!==id); saveBank(); bump("gems",back);
+  toast(ripe?`이자까지 보석 ${fmt(back)}개를 찾았어요!`:`보석 ${fmt(back)}개를 찾았어요 (이자 없이)`); }
+function openBank(){
+  const deps=bank.deps||[], now=Date.now();
+  const sum=deps.reduce((a,d)=>a+d.amt,0);
+  openSheet(`<div class="rkhead"><h2>🐷 보석 저금통</h2><button class="btn ghost small" data-evclose>닫기</button></div>
+    <p class="note" style="margin:0">보석을 맡기면 <b>${BANK_DAYS}일 뒤에 ${BANK_RATE*100}% 이자</b>를 붙여서 돌려줘요. 그 전에 찾으면 맡긴 만큼만 돌려줘요.</p>
+    <div class="bankin"><input id="bankAmt" type="number" inputmode="numeric" min="${BANK_MIN}" placeholder="맡길 보석 (지금 ${fmt(gems)}개)"><button class="btn" id="bankGo">맡기기</button></div>
+    <div class="row" style="gap:6px">${[100,1000,10000].map(v=>`<button class="btn ghost small" data-bq="${v}">${fmt(v)}</button>`).join("")}<button class="btn ghost small" data-bq="half">반</button></div>
+    <h3 style="margin:6px 0 0">맡긴 보석 ${fmt(sum)}개</h3>
+    <div class="banklist">${deps.length?deps.map(d=>{ const left=d.at+BANK_DAYS*864e5-now, ripe=left<=0, p=Math.min(100,(now-d.at)/(BANK_DAYS*864e5)*100);
+      return `<div class="bankrow ${ripe?"ripe":""}"><div style="flex:1;min-width:0"><b>${fmt(d.amt)}개</b> → <b>${fmt(Math.floor(d.amt*(1+BANK_RATE)))}개</b>
+        <div class="bankbar"><i style="width:${p}%"></i></div><span class="note">${ripe?"다 익었어요! 찾으면 이자까지":`${Math.ceil(left/864e5)}일 남았어요`}</span></div>
+        <button class="btn small ${ripe?"":"ghost"}" data-btake="${d.id}">찾기</button></div>`; }).join(""):`<p class="note">아직 맡긴 보석이 없어요.</p>`}</div>`,
+  (m)=>{ $("#bankGo").onclick=()=>{ if(bankDeposit($("#bankAmt").value)) openBank(); };
+    m.querySelectorAll("[data-bq]").forEach(b=>b.onclick=()=>{ $("#bankAmt").value=b.dataset.bq==="half"?Math.floor(gems/2):b.dataset.bq; });
+    m.querySelectorAll("[data-btake]").forEach(b=>b.onclick=()=>{ const d=(bank.deps||[]).find(x=>x.id===b.dataset.btake); if(!d) return;
+      const ripe=Date.now()-d.at>=BANK_DAYS*864e5; if(!ripe&&!b.dataset.armed){ b.dataset.armed="1"; b.textContent="이자 없이 찾기?"; return; } bankTake(d.id); openBank(); }); });
+}
+
+/* ---------- 28. 생일: 관리자가 생일을 넣어 두면, 그날 접속했을 때 축하하고 보상을 골라요 ---------- */
+let evCfg={bday:{tickets:3,gems:3000,coins:300000,fish:50000},msg:"생일 축하해! 버크의 모든 드래곤이 축하하고 있어 🎉"};
+let bdayDone={year:""}; const saveBday=makeSaver("settings/bday",()=>bdayDone);
+function checkBirthday(){ const b=FB.bday; if(!b||b!==mmdd()) return; const y=dayKey().slice(0,4); if(bdayDone.year===y) return;
+  confetti(); const r=evCfg.bday||{};
+  const opts=[["tickets","🎟️",`펫 뽑기권 ${r.tickets||0}장`],["gems","💎",`보석 ${fmt(r.gems||0)}개`],["coins","🪙",`코인 ${fmt(r.coins||0)}개`],["fish","🐟",`물고기 ${fmt(r.fish||0)}마리`]].filter(o=>r[o[0]]);
+  openSheet(`<div class="bdayhead"><div class="bdaycake">🎂</div><h2>${esc(FB.name||"")}${FB.name?"님, ":""}생일 축하해요!</h2><p>${esc(evCfg.msg||"")}</p></div>
+    <p style="margin:0;font-weight:700;text-align:center">생일 선물을 하나 골라요!</p>
+    <div class="bdayopts">${opts.map(o=>`<button class="bdayopt" data-bd="${o[0]}"><span>${o[1]}</span><b>${o[2]}</b></button>`).join("")}</div>`,
+   (m,close)=>{ m.querySelectorAll("[data-bd]").forEach(b=>b.onclick=()=>{ const k=b.dataset.bd; giveAll({[k]:r[k]}); bdayDone={year:y,pick:k}; saveBday(); confetti();
+      m.querySelector(".evcard").innerHTML=`<div class="bdayhead"><div class="bdaycake">🎁</div><h2>선물을 받았어요!</h2><p>${giftText({[k]:r[k]})}</p><button class="btn" data-evclose>고마워요!</button></div>`;
+      m.querySelector("[data-evclose]").onclick=close; }); },"bday");
+}
+
+/* ---------- 31. 시즌 패스: 크리스마스 시즌 ---------- */
+const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:30,xp:100,skip:1000};
+function spReward(t){ // 단계별 보상
+  if(t===10) return {bk:"xmas_tree"}; if(t===20) return {tickets:3}; if(t===30) return {bk:"santa_statue",tickets:2};
+  if(t%5===0) return {tickets:1};
+  const k=["gems","fish","coins"][t%3], base={gems:100,fish:3000,coins:30000}[k]; return {[k]:base*Math.ceil(t/3)}; }
+let sp={id:SEASON.id,xp:0,claimed:{},day:""}; const saveSp=makeSaver("settings/season",()=>sp);
+const spActive=()=>{ const d=dayKey(); return d>=SEASON.start&&d<=SEASON.end; };
+const spTier=()=>Math.min(SEASON.tiers,Math.floor((sp.xp||0)/SEASON.xp));
+function spXP(n){ if(!spActive()||!cloud) return; if(sp.id!==SEASON.id) sp={id:SEASON.id,xp:0,claimed:{},day:""};
+  const before=spTier(); sp.xp=Math.min(SEASON.tiers*SEASON.xp,(sp.xp||0)+n); saveSp();
+  if(spTier()>before){ toast(`${SEASON.ico} 시즌 패스 ${spTier()}단계! 보상을 받으러 가요`); } }
+function spDaily(){ if(!spActive()) return; const d=dayKey(); if(sp.day!==d){ sp.day=d; spXP(50); } }
+function openSeason(){
+  const t=spTier(), inTier=(sp.xp||0)-t*SEASON.xp, max=t>=SEASON.tiers;
+  const end=new Date(SEASON.end+"T23:59:59+09:00"), left=Math.max(0,Math.ceil((end-Date.now())/864e5));
+  openSheet(`<div class="rkhead"><h2>${SEASON.ico} ${SEASON.name} 패스</h2><button class="btn ghost small" data-evclose>닫기</button></div>
+    <div class="sphero"><div class="sptier">${t}<small>단계</small></div><div style="flex:1;min-width:0">
+      <div class="bankbar big"><i style="width:${max?100:inTier/SEASON.xp*100}%"></i></div>
+      <span class="note">${max?"모든 단계를 깼어요! 🎅":`다음 단계까지 ${SEASON.xp-inTier} 경험치`} · ${left}일 남았어요</span></div></div>
+    <details class="hdet" style="border:0;padding:0"><summary style="text-align:left">경험치는 어떻게 모아요?</summary><ul>
+      <li>매일 처음 접속하면 +50</li><li>퀴즈 정답 +5, 월드컵·선물 등 보석 받기 +10</li><li>드래곤 뽑기 1번 +3</li><li>미니게임 한 판 끝내기 +20 (버크 물고기 걷기 포함)</li><li>전투 승리 +15, 패배 +5</li><li>저금통에 맡기기 +10</li></ul></details>
+    ${max?"":`<button class="btn ghost small" id="spSkip" ${gems<SEASON.skip?"disabled":""}>보석 ${fmt(SEASON.skip)}개로 한 단계 건너뛰기</button>`}
+    <div class="splist">${Array.from({length:SEASON.tiers},(_,i)=>i+1).map(n=>{ const r=spReward(n), got=sp.claimed&&sp.claimed[n], open=n<=t, special=r.bk;
+      return `<div class="sprow ${open?"open":""} ${got?"got":""} ${special?"special":""}"><span class="spn">${n}</span><span class="spr">${special?`${BK_B[r.bk].ico} `:""}${giftText(r)}</span>
+        ${got?`<span class="note">받음 ✓</span>`:open?`<button class="btn small" data-spget="${n}">받기</button>`:`<span class="note">🔒</span>`}</div>`; }).join("")}</div>`,
+  (m)=>{ const sk=$("#spSkip"); if(sk) sk.onclick=()=>{ if(gems<SEASON.skip){ toast("보석이 모자라요"); return; } if(!sk.dataset.armed){ sk.dataset.armed="1"; sk.textContent=`보석 ${fmt(SEASON.skip)}개를 쓸까요? 한 번 더 누르세요`; return; }
+      bump("gems",-SEASON.skip); sp.xp=Math.min(SEASON.tiers*SEASON.xp,(spTier()+1)*SEASON.xp); saveSp(); toast(`${spTier()}단계로 건너뛰었어요!`); openSeason(); };
+    m.querySelectorAll("[data-spget]").forEach(b=>b.onclick=()=>{ const n=+b.dataset.spget; if(sp.claimed&&sp.claimed[n]) return; const r=spReward(n);
+      sp.claimed=Object.assign({},sp.claimed,{[n]:true}); saveSp(); giveAll(r); if(r.bk) confetti(); toast(`${giftText(r)}을(를) 받았어요!`); openSeason(); }); });
+}
+
+/* ---------- 저장소 연결 ---------- */
+function initEventsCloud(d){
+  const sub=(path,setter)=>d.doc(path).onSnapshot(s=>{ if(s.exists&&!dirtyDocs[path]&&!s.metadata.hasPendingWrites) setter(JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
+  sub("settings/bank",v=>{ bank=Object.assign({deps:[]},v); });
+  sub("settings/bday",v=>{ bdayDone=Object.assign({year:""},v); });
+  sub("settings/season",v=>{ sp=v.id===SEASON.id?Object.assign({claimed:{}},v):{id:SEASON.id,xp:0,claimed:{},day:""}; });
+  d.doc("settings/events").onSnapshot(s=>{ if(s.exists) evCfg=Object.assign({},evCfg,JSON.parse(JSON.stringify(s.data()||{}))); },()=>{});
+  setTimeout(()=>{ spDaily(); checkBirthday(); },3500);
 }
 
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
