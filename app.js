@@ -788,10 +788,10 @@ function ownedFx(){
   const own={has:id=>petN(id)>0};
   return petDefs.filter(p=>own.has(p.id)&&p.fx&&p.fx.type&&p.fx.type!=="none");
 }
-// 같은 펫을 또 뽑을 때마다 효과가 기본값의 10분의 1씩 세져요
+// 같은 펫을 또 뽑을 때마다 효과가 0.1%씩 세져요
 const r2=x=>Math.round(x*100)/100;
 function petCopies(id){ return petN(id); }
-function fxN(p){ const base=+p.fx.n||(p.fx.type==="new_odds"||p.fx.type==="speed"?0:1); return base*(1+0.1*Math.max(0,petCopies(p.id)-1)); }
+function fxN(p){ const base=+p.fx.n||(p.fx.type==="new_odds"||p.fx.type==="speed"?0:1); return base*(1+0.001*Math.max(0,petCopies(p.id)-1)); }
 function fxNow(p){ return Object.assign({},p.fx,{n:r2(fxN(p))}); }
 function boostLeft(f){ const sec=(f.sec||5)*1000, dur=(f.dur||7)*1000, t=(Date.now()-T0)%(sec+dur); return t>=sec?Math.ceil((sec+dur-t)/1000):0; }
 function gainMult(why){
@@ -896,7 +896,7 @@ function petHTML(){
       <div class="gemrow"><span class="ticket">펫 뽑기권</span><span class="big" style="color:var(--t-epic)">${tickets}</span><span class="note">장</span></div>
       <p class="note" style="margin:0">보석 ${fmt(PET_GEM_COST)}개로 아기 드래곤 펫을 뽑아요. 뽑기권이 남아 있으면 뽑기권을 먼저 써요.</p>
     </div>
-    ${ownedFx().length?`<div class="end" style="gap:6px"><p class="sec-title" style="margin:0">지금 켜진 펫 효과</p><ul class="fxlist">${ownedFx().map(p=>{const c=petCopies(p.id); return `<li><b>${esc(p.name)}</b>${c>1?` <span class="note">${c}마리 · +${(c-1)*10}%</span>`:""} ${esc(describeFx(fxNow(p)))}</li>`;}).join("")}</ul></div>`:""}
+    ${ownedFx().length?`<div class="end" style="gap:6px"><p class="sec-title" style="margin:0">지금 켜진 펫 효과</p><ul class="fxlist">${ownedFx().map(p=>{const c=petCopies(p.id); return `<li><b>${esc(p.name)}</b>${c>1?` <span class="note">${c}마리 · +${+((c-1)*0.1).toFixed(1)}%</span>`:""} ${esc(describeFx(fxNow(p)))}</li>`;}).join("")}</ul></div>`:""}
     ${lastPet?petCard(lastPet):""}
     <div class="egg-stage">${stage}
       ${ready.length&&(tickets>0||gems>=PET_GEM_COST||fz.petAuto)?`<button class="btn ${fz.petAuto?"":"ghost"}" id="petAutoBtn">${fz.petAuto?"펫 자동 뽑기 멈추기":"펫 자동 뽑기"}</button>`:""}
@@ -1258,7 +1258,7 @@ function enemyUnit(u,n){
   const c=cfgOf(u.sid), m=(1+0.1*(u.lv-1))*g, hm=u.boss?3:1, am=u.boss?1.4:1;
   const hp=Math.round(c.hp*m*hm); return {sid:u.sid,lv:u.lv,boss:u.boss,max:hp,hp,atk:Math.round(c.atk*m*am),sk:c.sk,charge:0,stun:false,shield:0};
 }
-// 가진 펫들의 전투 효과 합계 (같은 펫이 더 있으면 10%씩 세져요)
+// 가진 펫들의 전투 효과 합계 (같은 펫이 더 있으면 0.1%씩 세져요)
 // 가진 펫들의 전투 규칙 (펫을 여러 마리 가져도 전투 효과는 한 번만 적용돼요)
 const BFX2RULE={team_hp:["always","hp_mult"],team_atk:["always","atk_mult"],regen:["turn","heal_pct"],crit:["always","crit_pct"],start_charge:["start","charge"],revive:["faint","revive_pct"],reward:["always","coin_pct"]};
 function petRules(p){
