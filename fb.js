@@ -172,7 +172,7 @@
       try{ const c=await fs.doc("content/main/blobs/"+id).get(); if(c.exists) continue;
         const u=await fs.doc("users/"+user.uid+"/blobs/"+id).get(); if(u.exists) await fs.doc("content/main/blobs/"+id).set(u.data()); }catch(e){} } }
   /* 랭킹: rank/{게임}/s/{uid} 에 내 최고 기록 하나. 더 좋아질 때만 고치고, 시간은 서버 시간. 같은 기록이면 먼저 세운 사람이 위 */
-  const RANK_IDS=["suika","fly","hide","mem_easy","mem_normal","mem_hard","sling","run","stack","simon","egg","dodge","rhythm","magic","tetris"];
+  const RANK_IDS=["suika","fly","hide","mem_easy","mem_normal","mem_hard","sling","run","stack","simon","egg","dodge","rhythm","magic","tetris","jump","ninja","seek","fishing","td"];
   const rank={
     async list(game){ if(!RANK_IDS.includes(game)) return []; const low=game.startsWith("mem_");
       const s=await fs.collection("rank/"+game+"/s").get();

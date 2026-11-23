@@ -202,6 +202,21 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .samtip>div{flex:1 1 220px;min-width:0}.samtip b{display:block}.samtip .samb{display:flex;gap:6px;flex-wrap:wrap}
 .throw{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
 .throw button[aria-pressed="true"]{background:var(--ember);color:var(--ember-ink);border-color:var(--ember)}
+
+.mgclean{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto}
+.mgcrow{display:grid;grid-template-columns:auto 1.8em minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--line) 25%,transparent)}
+.mgcrow:has(input:checked){background:color-mix(in srgb,#E63946 16%,transparent)}.mgcn{color:var(--muted);text-align:right}
+.skingrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.skin{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:2px solid var(--line);border-radius:14px;text-align:center}.skin.on{border-color:var(--ember)}
+.skin canvas{width:90px;height:90px}
+.attgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.attc{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;border-radius:10px;background:color-mix(in srgb,var(--line) 30%,transparent);padding:3px;text-align:center;font-size:.62rem;line-height:1.2;overflow:hidden}
+.attc .attd{font-weight:700;font-size:.8rem}.attc.big{background:color-mix(in srgb,#F2C14E 30%,transparent)}.attc.got{background:color-mix(in srgb,#2EB872 30%,transparent)}
+.attc.next{outline:3px solid var(--ember);outline-offset:-3px}
+.fsdex{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.fsd{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:6px;border-radius:12px;border:2px solid var(--rc);font-size:.85rem}.fsd.no{opacity:.6;border-style:dashed}
+.fsd canvas{width:120px;height:70px}
+.tdmenu{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;min-height:40px}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{
