@@ -27,7 +27,7 @@
   window.addEventListener("pagehide",flushAll);
   function throttledSet(path,val){ let e=pend.get(path); if(!e){ e={last:0,t:null,has:false,val:null,waiters:[]}; pend.set(path,e); }
     e.val=val; e.has=true; const pr=new Promise((ok,bad)=>e.waiters.push([ok,bad]));
-    const wait=THROTTLE_MS-(Date.now()-e.last);
+    const wait=document.hidden?0:THROTTLE_MS-(Date.now()-e.last); // 앱이 가려지는 중이면 바로 저장
     if(wait<=0) flushOne(path); else if(!e.t) e.t=setTimeout(()=>flushOne(path),wait);
     return pr; }
   function wrapDoc(path){ const ref=fs.doc(path); if(!path.startsWith("users/")||/\/settings\/(season|bank|bday|tour|raid|tama)$/.test(path)) return ref;
@@ -239,7 +239,7 @@
       .sort((a,b)=>(b.online-a.online)||(b.me-a.me)||(a.ago-b.ago)); }
     return { startMe, watch(f){ ensure(); subs.add(f); f(list.length?view():[]); return ()=>subs.delete(f); }, view };
   })();
-  window.FB={ publishBlobs, presence, ghost, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
+  window.FB={ flushWrites:flushAll, publishBlobs, presence, ghost, rank, arena, raid, get name(){ return myName; }, get bday(){ return myBday; }, ready:()=>ready, preload, get isOwner(){ return isOwner; }, get uid(){ return user&&user.uid; },
     signOut:()=>auth.signOut(), admin, gateOff, progress:t=>{ const p=$("#gProg"); if(p) p.textContent=t; } };
 
   try{

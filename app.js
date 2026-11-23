@@ -519,14 +519,8 @@ function addCount(kind,id){
   else tLocal[kind][id]=(tLocal[kind][id]||0)+1;
   recomputeTally(); saveLocal();
 }
-async function flushTally(){
-  if(!cloud) return;
-  if(tallyWriting){ tallyAgain=true; return; }
-  tallyWriting=true; let ok=true;
-  try{ await cloud.db.doc("tally/"+INST).set({d:Object.assign({},tMine.d),p:Object.assign({},tMine.p),at:Date.now()}); }catch(e){ ok=false; }
-  tallyWriting=false;
-  if(tallyAgain){ tallyAgain=false; flushTally(); }
-  else if(!ok){ clearTimeout(tallyT); tallyT=setTimeout(flushTally,5000); }
+function flushTally(){ tallyT=null; if(!cloud) return;
+  try{ Promise.resolve(cloud.db.doc("tally/"+INST).set({d:Object.assign({},tMine.d),p:Object.assign({},tMine.p),at:Date.now()})).catch(()=>{ clearTimeout(tallyT); tallyT=setTimeout(flushTally,5000); }); }catch(e){}
 }
 function readAllOnce(d,coll){
   return new Promise((ok,bad)=>{
@@ -620,11 +614,8 @@ function saveWallet(){
   saveLocal(); updateTop(); if(!cloud||!purseReady) return;
   clearTimeout(walletT); walletT=setTimeout(flushPurse,500);
 }
-async function flushPurse(){
-  if(walletWriting){ walletAgain=true; return; }
-  walletWriting=true;
-  try{ await cloud.db.doc("purse/"+INST).set({gems:wMine.gems,tickets:wMine.tickets,completions:wMine.completions,coins:wMine.coins,at:Date.now()}); }catch(e){}
-  walletWriting=false; if(walletAgain){ walletAgain=false; flushPurse(); }
+function flushPurse(){ walletT=null; if(!cloud) return;
+  try{ Promise.resolve(cloud.db.doc("purse/"+INST).set({gems:wMine.gems,tickets:wMine.tickets,completions:wMine.completions,coins:wMine.coins,at:Date.now()})).catch(()=>{ clearTimeout(walletT); walletT=setTimeout(flushPurse,5000); }); }catch(e){}
 }
 async function initPurse(d){
   try{
@@ -1190,15 +1181,20 @@ const dirtyDocs={}; // 아직 저장 중인 문서는 서버에서 온 옛 값�
 const SAVERS=[];
 function makeSaver(path,get){
   let t=null,busy=false,again=false;
-  const flush=async()=>{ if(!cloud){ dirtyDocs[path]=false; return; } if(busy){again=true;return;} busy=true;
-    try{ await cloud.db.doc(path).set(JSON.parse(JSON.stringify(get()))); }catch(e){}
-    busy=false; if(again){again=false; flush(); return;} setTimeout(()=>{ if(!busy&&!t) dirtyDocs[path]=false; },800); };
+  // 기다리지 않고 바로 저장을 넘겨요 (같은 문서는 마지막 값으로 모여서 저장돼요). 앞 저장이 끝나길 기다리다 앱이 꺼지면 사라지던 문제 수정
+  let inflight=0;
+  const flush=()=>{ if(!cloud){ dirtyDocs[path]=false; return; } inflight++;
+    let pr; try{ pr=cloud.db.doc(path).set(JSON.parse(JSON.stringify(get()))); }catch(e){ pr=Promise.resolve(); }
+    Promise.resolve(pr).catch(()=>{}).then(()=>{ inflight--; setTimeout(()=>{ if(!inflight&&!t) dirtyDocs[path]=false; },800); }); };
   const save=()=>{ dirtyDocs[path]=true; saveBLocal(); clearTimeout(t); t=setTimeout(()=>{ t=null; flush(); },500); };
   save.now=()=>{ dirtyDocs[path]=true; clearTimeout(t); t=null; flush(); }; // 기다리지 않고 바로 저장 (보상 받기 등)
   save.pending=()=>!!t; SAVERS.push(save); return save;
 }
 // 앱을 닫거나 다른 앱으로 넘어가면 기다리던 저장을 바로 해요
-function flushSavers(){ for(const s of SAVERS) if(s.pending()) s.now(); }
+function flushSavers(){ for(const s of SAVERS) if(s.pending()) s.now();
+  try{ if(walletT){ clearTimeout(walletT); walletT=null; flushPurse(); } }catch(e){}
+  try{ if(tallyT){ clearTimeout(tallyT); tallyT=null; flushTally(); } }catch(e){}
+  try{ if(window.FB&&FB.flushWrites) FB.flushWrites(); }catch(e){} }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) flushSavers(); });
 window.addEventListener("pagehide",flushSavers);
 const saveBset=makeSaver("settings/battle",()=>({map:bset}));
@@ -1632,7 +1628,7 @@ const CK_UP=[
  {k:"feast",name:"버크 잔치",desc:"피버가 레벨마다 1초 더 길어져요 (기본 8초)",base:500,grow:2.2,max:12}
 ];
 const FISH_SVG='<svg class="fish" viewBox="0 0 32 20" aria-hidden="true"><path d="M2 10c5-8 15-9 22-3l6-5v16l-6-5c-7 6-17 5-22-3z" fill="var(--fishc)"/><circle cx="9" cy="8.5" r="1.6" fill="#1b2a33"/><path d="M15 4c2 4 2 8 0 12" stroke="rgba(255,255,255,.5)" stroke-width="1.3" fill="none"/></svg>';
-let ck={tap:0,auto:0,crit:0,feast:0,fish:0,taps:0,earned:0,pick:""};
+let ck={tap:0,auto:0,crit:0,feast:0,fish:0,taps:0,earned:0,pick:"",fishReset:"2026-11-15"}; // fishReset: 새 기록이 한 번 0이 되는 버그 방지
 try{ const v=JSON.parse(localStorage.getItem("httyd-clicker")||"null"); if(v) ck=Object.assign(ck,v); }catch(e){}
 const saveCk=makeSaver("settings/clicker",()=>ck);
 // 관리자가 미니게임 사진을 바꾸면 모두의 기본 사진도 같이 바뀌어요
@@ -1644,7 +1640,7 @@ function mgPublishSoon(){ if(!FB.isOwner||!cloud) return; clearTimeout(mgPubT); 
 function saveCkAll(){ mgPublishSoon(); try{ localStorage.setItem("httyd-clicker",JSON.stringify(ck)); }catch(e){} saveCk(); }
 function initClickCloud(d){
   d.doc("settings/clicker").onSnapshot(s=>{ if(s.exists&&!dirtyDocs["settings/clicker"]&&!s.metadata.hasPendingWrites){
-    ck=Object.assign({tap:0,auto:0,crit:0,feast:0,fish:0,taps:0,earned:0,pick:""},JSON.parse(JSON.stringify(s.data()||{})));
+    ck=Object.assign({tap:0,auto:0,crit:0,feast:0,fish:0,taps:0,earned:0,pick:"",fishReset:FISH_RESET},JSON.parse(JSON.stringify(s.data()||{})));
     if(ck.fishReset!==FISH_RESET){ ck.fish=0; ckFishPend=0; ck.fishReset=FISH_RESET; saveCkAll(); } /* 아빠 요청: 물고기 한 번 0으로 */
     if(view==="click"){ if(mgMode==="click") renderClick(); else if(mgMode==="berk") bkRefresh(); } } },()=>{});
 }
