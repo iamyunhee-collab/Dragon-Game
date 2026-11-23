@@ -544,10 +544,11 @@ function readAllOnce(d,coll){
 }
 function initTally(d){
   d.collection("tally").onSnapshot(s=>{
-    const od={}, op={}; let b=null;
+    const od={}, op={}; let b=null, fix=null;
     for(const x of s.docs){
       const v=x.data()||{};
       if(x.id==="base"){ b=v; continue; }
+      if(x.id==="petfix") fix=v;
       if(x.id===INST) continue;
       for(const k in (v.d||{})) od[k]=(od[k]||0)+(+v.d[k]||0);
       for(const k in (v.p||{})) op[k]=(op[k]||0)+(+v.p[k]||0);
@@ -555,11 +556,20 @@ function initTally(d){
     tOthers={d:od,p:op};
     if(b) tBase={d:b.d||{},p:b.p||{}};
     tallyOn=true; recomputeTally(); saveLocal();
+    if(!(s.metadata&&s.metadata.fromCache)&&b&&(+(fix&&fix.v)||0)<PET_RESET_V) petReset(d,fix);
     if(view==="fortune") renderFortune();
     if(!b&&!migrating) migrateLegacy(d);
     else if(b&&b.done&&!cleaning) cleanLegacy(d);
   },()=>{});
 }
+// 펫 효과 초기화: 같은 펫을 여러 마리 모은 만큼 쌓인 효과를 기본값(1마리)으로 되돌려요. 펫은 그대로 갖고 있어요.
+// tally/petfix 에 '빼기' 숫자를 넣어 합계가 1마리가 되게 해요. PET_RESET_V 를 올리면 모두 한 번 더 초기화돼요.
+const PET_RESET_V=1; let petResetting=false;
+async function petReset(d,fix){ if(petResetting) return; petResetting=true;
+  const old=Object.assign({},(fix&&fix.p)||{}), np=Object.assign({},old);
+  for(const id in petC){ const n=+petC[id]||0; if(n>1) np[id]=(+old[id]||0)-(n-1); }
+  try{ await d.doc("tally/petfix").set({v:PET_RESET_V,p:np,d:{},at:Date.now()}); }catch(e){ petResetting=false; return; }
+  petResetting=false; }
 // 예전 기록을 세어서 tally/base에 한 번만 저장해요.
 async function migrateLegacy(d){
   migrating=true;
@@ -3010,7 +3020,7 @@ berkTheme();
 const HOME_SECTIONS=[
  {title:"이벤트",items:[
   {id:"season",ico:"🎄",col:"#2E8B57",name:"크리스마스 시즌 패스",sum:"놀면서 경험치 모아 단계별 선물 받기",go:()=>openSeason(),
-   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 100마다 한 단계씩 올라요. 모두 <b>1,225단계</b>예요. 목록은 100단계씩 넘겨 보고, '모두 받기'로 한꺼번에 받을 수 있어요.</p>
+   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 300마다 한 단계씩 올라요. 모두 <b>1,225단계</b>예요. 목록은 100단계씩 넘겨 보고, '모두 받기'로 한꺼번에 받을 수 있어요.</p>
    <ul><li>경험치: 매일 첫 접속 +50, 퀴즈 정답 +5, 미니게임 한 판 +20, 전투 승리 +15, 드래곤 뽑기 +3 등.</li>
    <li>단계마다 보석, 코인, 물고기, 펫 뽑기권을 받아요. 5단계마다 펫 뽑기권이에요.</li>
    <li><b>10단계</b> 버크 <b>크리스마스 트리</b>, <b>25단계</b> 펫 뽑기권 3장, <b>50단계</b> 뽑기권 5장·보석 5k, <b>75단계</b> 뽑기권 5장·코인 1m, <b>100단계</b> <b>산타 투슬리스 동상</b>·뽑기권 10장·보석 20k! 그 뒤로도 100단계마다 뽑기권·보석, 500·1000단계마다 더 큰 선물, <b>1,225단계</b>에는 뽑기권 100장·보석 500k·코인 50m!</li>
@@ -3308,7 +3318,7 @@ function checkBirthday(){ if(!evLoaded["settings/bday"]){ setTimeout(checkBirthd
 }
 
 /* ---------- 31. 시즌 패스: 크리스마스 시즌 ---------- */
-const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:1225,xp:100,skip:1000};
+const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:1225,xp:300,skip:1000};
 function spReward(t){ // 단계별 보상 (100단계 넘어가면 기본 보상은 더 커지지 않고, 큰 단계마다 특별 보상)
   if(t===10) return {bk:"xmas_tree"}; if(t===25) return {tickets:3}; if(t===50) return {tickets:5,gems:5000}; if(t===75) return {tickets:5,coins:1000000};
   if(t===100) return {bk:"santa_statue",tickets:10,gems:20000};
