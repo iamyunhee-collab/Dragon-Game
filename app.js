@@ -3010,10 +3010,10 @@ berkTheme();
 const HOME_SECTIONS=[
  {title:"이벤트",items:[
   {id:"season",ico:"🎄",col:"#2E8B57",name:"크리스마스 시즌 패스",sum:"놀면서 경험치 모아 단계별 선물 받기",go:()=>openSeason(),
-   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 100마다 한 단계씩 올라요. 모두 <b>100단계</b>예요.</p>
+   det:`<p>12월 31일까지 열리는 <b>크리스마스 시즌</b>이에요. 무엇을 하든 경험치가 쌓이고, 100마다 한 단계씩 올라요. 모두 <b>5,000단계</b>예요. 목록은 100단계씩 넘겨 보고, '모두 받기'로 한꺼번에 받을 수 있어요.</p>
    <ul><li>경험치: 매일 첫 접속 +50, 퀴즈 정답 +5, 미니게임 한 판 +20, 전투 승리 +15, 드래곤 뽑기 +3 등.</li>
    <li>단계마다 보석, 코인, 물고기, 펫 뽑기권을 받아요. 5단계마다 펫 뽑기권이에요.</li>
-   <li><b>10단계</b> 버크 <b>크리스마스 트리</b>, <b>25단계</b> 펫 뽑기권 3장, <b>50단계</b> 뽑기권 5장·보석 5k, <b>75단계</b> 뽑기권 5장·코인 1m, <b>100단계</b> <b>산타 투슬리스 동상</b>·뽑기권 10장·보석 20k!</li>
+   <li><b>10단계</b> 버크 <b>크리스마스 트리</b>, <b>25단계</b> 펫 뽑기권 3장, <b>50단계</b> 뽑기권 5장·보석 5k, <b>75단계</b> 뽑기권 5장·코인 1m, <b>100단계</b> <b>산타 투슬리스 동상</b>·뽑기권 10장·보석 20k! 그 뒤로도 100단계마다 뽑기권·보석, 500·1000단계마다 더 큰 선물, <b>5,000단계</b>에는 뽑기권 100장·보석 500k·코인 50m!</li>
    <li>급하면 <b>보석 1,000개</b>로 한 단계를 건너뛸 수 있어요.</li>
    <li>받은 단계는 '받기'를 눌러야 들어와요.</li></ul>`},
   {id:"bank",ico:"🐷",col:"#D65CA8",name:"보석 저금통",sum:"보석을 맡기면 7일 뒤 이자가 붙어요",go:()=>openBank(),
@@ -3308,12 +3308,17 @@ function checkBirthday(){ if(!evLoaded["settings/bday"]){ setTimeout(checkBirthd
 }
 
 /* ---------- 31. 시즌 패스: 크리스마스 시즌 ---------- */
-const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:100,xp:100,skip:1000};
-function spReward(t){ // 단계별 보상
+const SEASON={id:"xmas2026",name:"크리스마스 시즌",ico:"🎄",start:"2026-11-17",end:"2026-12-31",tiers:5000,xp:100,skip:1000};
+function spReward(t){ // 단계별 보상 (100단계 넘어가면 기본 보상은 더 커지지 않고, 큰 단계마다 특별 보상)
   if(t===10) return {bk:"xmas_tree"}; if(t===25) return {tickets:3}; if(t===50) return {tickets:5,gems:5000}; if(t===75) return {tickets:5,coins:1000000};
   if(t===100) return {bk:"santa_statue",tickets:10,gems:20000};
+  if(t===SEASON.tiers) return {tickets:100,gems:500000,coins:50000000};
+  if(t%1000===0) return {tickets:30,gems:100000};
+  if(t%500===0) return {tickets:20,gems:50000};
+  if(t%100===0) return {tickets:10,gems:20000};
   if(t%5===0) return {tickets:1};
-  const k=["gems","fish","coins"][t%3], base={gems:100,fish:3000,coins:30000}[k]; return {[k]:base*Math.ceil(t/3)}; }
+  const k=["gems","fish","coins"][t%3], base={gems:100,fish:3000,coins:30000}[k]; return {[k]:base*Math.min(34,Math.ceil(t/3))}; }
+const SP_PAGE=100; let spPage=null; // 한 번에 100단계씩 보여줘요 (5000줄을 다 그리면 느려져요)
 let sp={id:SEASON.id,xp:0,claimed:{},day:""}, spPendXP=0; const saveSp=guardSave("settings/season",makeSaver("settings/season",()=>sp));
 const spActive=()=>{ const d=dayKey(); return d>=SEASON.start&&d<=SEASON.end; };
 const spTier=()=>Math.min(SEASON.tiers,Math.floor((sp.xp||0)/SEASON.xp));
@@ -3328,17 +3333,28 @@ function openSeason(){ if(!evReady("settings/season")) return;
     <div class="sphero"><div class="sptier">${t}<small>단계</small></div><div style="flex:1;min-width:0">
       <div class="bankbar big"><i style="width:${max?100:inTier/SEASON.xp*100}%"></i></div>
       <span class="note">${max?"모든 단계를 깼어요! 🎅":`다음 단계까지 ${SEASON.xp-inTier} 경험치`} · ${left}일 남았어요</span></div></div>
+    ${spUnclaimed(t).length?`<button class="btn" id="spAll">받을 수 있는 보상 모두 받기 (${fmt(spUnclaimed(t).length)}개)</button>`:""}
     <details class="hdet" style="border:0;padding:0"><summary style="text-align:left">경험치는 어떻게 모아요?</summary><ul>
       <li>매일 처음 접속하면 +50</li><li>퀴즈 정답 +5, 월드컵·선물 등 보석 받기 +10</li><li>드래곤 뽑기 1번 +3</li><li>미니게임 한 판 끝내기 +20 (버크 물고기 걷기 포함)</li><li>전투 승리 +15, 패배 +5</li><li>저금통에 맡기기 +10</li></ul></details>
     ${max?"":`<button class="btn ghost small" id="spSkip" ${gems<SEASON.skip?"disabled":""}>보석 ${fmt(SEASON.skip)}개로 한 단계 건너뛰기</button>`}
-    <div class="splist">${Array.from({length:SEASON.tiers},(_,i)=>i+1).map(n=>{ const r=spReward(n), got=sp.claimed&&sp.claimed[n], open=n<=t, special=r.bk;
+    ${spPagerHTML(t)}
+    <div class="splist">${Array.from({length:SP_PAGE},(_,i)=>spPgStart()+i).filter(n=>n<=SEASON.tiers).map(n=>{ const r=spReward(n), got=sp.claimed&&sp.claimed[n], open=n<=t, special=r.bk;
       return `<div class="sprow ${open?"open":""} ${got?"got":""} ${special?"special":""}"><span class="spn">${n}</span><span class="spr">${special?`${BK_B[r.bk].ico} `:""}${giftText(r)}</span>
         ${got?`<span class="note">받음 ✓</span>`:open?`<button class="btn small" data-spget="${n}">받기</button>`:`<span class="note">🔒</span>`}</div>`; }).join("")}</div>`,
   (m)=>{ const sk=$("#spSkip"); if(sk) sk.onclick=()=>{ if(gems<SEASON.skip){ toast("보석이 모자라요"); return; } if(!sk.dataset.armed){ sk.dataset.armed="1"; sk.textContent=`보석 ${fmt(SEASON.skip)}개를 쓸까요? 한 번 더 누르세요`; return; }
       bump("gems",-SEASON.skip); sp.xp=Math.min(SEASON.tiers*SEASON.xp,(spTier()+1)*SEASON.xp); saveSp.now(); flushSavers(); toast(`${spTier()}단계로 건너뛰었어요!`); openSeason(); };
+    m.querySelectorAll("[data-sppg]").forEach(b=>b.onclick=()=>{ const v=b.dataset.sppg; spPage=v==="now"?null:Math.max(0,Math.min(Math.ceil(SEASON.tiers/SP_PAGE)-1,+v)); openSeason(); const c=m.querySelector(".evcard"); if(c){ const l=c.querySelector(".splist"); c.scrollTop=l?l.offsetTop-80:0; } });
+    const all=$("#spAll"); if(all) all.onclick=()=>{ const list=spUnclaimed(spTier()); if(!list.length) return; all.disabled=true; const sum={gems:0,fish:0,coins:0,tickets:0}, cl=Object.assign({},sp.claimed);
+      let statues=0; list.forEach(n=>{ const r=spReward(n); cl[n]=true; for(const k in sum) if(r[k]) sum[k]+=r[k]; if(r.bk){ giveAll({bk:r.bk}); statues++; } });
+      sp.claimed=cl; saveSp.now(); giveAll(sum); flushSavers(); confetti(); toast(`${fmt(list.length)}개 보상을 한꺼번에 받았어요! ${giftText(sum)}${statues?` + 동상 ${statues}개`:""}`); openSeason(); };
     m.querySelectorAll("[data-spget]").forEach(b=>b.onclick=()=>{ const n=+b.dataset.spget; if(sp.claimed&&sp.claimed[n]) return; if(n>spTier()) return; b.disabled=true; const r=spReward(n);
       sp.claimed=Object.assign({},sp.claimed,{[n]:true}); saveSp.now(); giveAll(r); flushSavers(); if(r.bk) confetti(); toast(`${giftText(r)}을(를) 받았어요!`); openSeason(); }); });
 }
+
+function spUnclaimed(t){ const out=[]; for(let n=1;n<=t;n++) if(!(sp.claimed&&sp.claimed[n])) out.push(n); return out; }
+function spPgStart(){ if(spPage==null){ const u=spUnclaimed(spTier())[0]||Math.min(SEASON.tiers,spTier()+1); return Math.floor((u-1)/SP_PAGE)*SP_PAGE+1; } return spPage*SP_PAGE+1; }
+function spPagerHTML(t){ const st=spPgStart(), pg=(st-1)/SP_PAGE, last=Math.ceil(SEASON.tiers/SP_PAGE)-1;
+  return `<div class="sppager"><button class="btn ghost small" data-sppg="${pg-1}" ${pg<=0?"disabled":""}>◀ 이전</button><span><b>${fmt(st)}~${fmt(Math.min(SEASON.tiers,st+SP_PAGE-1))}</b>단계</span><button class="btn ghost small" data-sppg="${pg+1}" ${pg>=last?"disabled":""}>다음 ▶</button><button class="btn ghost small" data-sppg="now">지금 단계로</button></div>`; }
 
 /* ---------- 저장소 연결 ---------- */
 function initEventsCloud(d){

@@ -116,6 +116,7 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .bkmap.season-autumn::after{opacity:.9;background-image:radial-gradient(ellipse 3px 2px,#E4572E 90%,transparent),radial-gradient(ellipse 2px 3px,#F2C14E 90%,transparent);background-size:70px 70px,50px 50px;animation:bksnow 10s linear infinite}
 @keyframes bksnow{from{background-position:0 0,0 0}to{background-position:20px 200px,-15px 150px}}
 @media (prefers-reduced-motion:reduce){.bkmap::after,.bdaycake,.confetti i{animation:none}}
+.sppager{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;position:sticky;top:-1px;z-index:2;background:var(--surface);padding:6px 0}.sppager span{min-width:7em;text-align:center}
 .tama{display:flex;flex-direction:column;gap:12px}
 .tmstage{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 12px 14px;border-radius:20px;background:radial-gradient(circle at 50% 35%,#FFF4D6,#F7D9A8 60%,#E9B97A);overflow:hidden}
 .tmstage.sleep{background:radial-gradient(circle at 50% 35%,#3B4A6B,#24304A 70%)}
