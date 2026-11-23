@@ -4303,5 +4303,28 @@ function renderTd(){ if(!TD||TD.state==="over") TD=tdNew();
     const t=TD.towers.find(q=>Math.hypot(q.x-p.x,q.y-p.y)<24); if(t){ TD.sel="t"+t.i; tdMenu(); return; }
     const i=TD_SLOTS.findIndex(([x,y])=>Math.hypot(x-p.x,y-p.y)<26); TD.sel=i>=0?i:null; tdMenu(); }); }
 
+/* ---------- 세이브 포인트: 단계가 있는 게임(불뿜기·숨은 드래곤·버크 지키기)은 새 단계에 들어갈 때마다 자동 저장 ----------
+   게임이 끝나거나 처음 열 때 '세이브 포인트에서 이어하기'로 그 단계부터 (그때 점수 그대로) 다시 할 수 있어요. 앱을 껐다 켜도 남아요. */
+const SAVE_GAMES={
+  sling:{label:s=>`${s.level}단계`,get:()=>S&&S.state==="aim"&&S.level>1?{level:S.level,score:S.score}:null,
+    fresh:()=>!S||(S.level===1&&S.score===0),apply:s=>{ S=slNew(); S.level=s.level; S.score=s.score; try{ slBuild(); }catch(e){} }},
+  seek:{label:s=>`${s.lv}단계`,get:()=>SEK&&SEK.state==="clear"?{lv:SEK.lv,score:SEK.score,hints:SEK.hints}:null,
+    fresh:()=>!SEK||(SEK.lv===1&&SEK.score===0&&SEK.state==="ready"),apply:s=>{ SEK=sekNew(); SEK.lv=s.lv; SEK.score=s.score; SEK.hints=s.hints; }},
+  td:{label:s=>`${s.wave}웨이브`,get:()=>TD&&TD.state==="between"?{wave:TD.wave,lives:TD.lives,gold:TD.gold,towers:TD.towers.map(t=>({i:t.i,x:t.x,y:t.y,type:t.type,lv:t.lv}))}:null,
+    fresh:()=>!TD||(TD.wave===1&&TD.state==="ready"&&!TD.towers.length),apply:s=>{ TD=tdNew(); TD.wave=s.wave; TD.lives=s.lives; TD.gold=s.gold; TD.towers=s.towers.map(t=>Object.assign({cd:0},t)); }}};
+const svLast={};
+function svGet(k){ const s=mini.saves&&mini.saves[k]; return s&&typeof s==="object"?s:null; }
+function svCheck(k){ const g=SAVE_GAMES[k], v=g.get(); if(!v) return; const cur=svGet(k), key=JSON.stringify(v.level||v.lv||v.wave);
+  if(svLast[k]===key) return; svLast[k]=key; if(cur&&JSON.stringify(cur.level||cur.lv||cur.wave)===key&&cur.score===v.score) return;
+  mini.saves=Object.assign({},mini.saves||{},{[k]:Object.assign(v,{at:Date.now()})}); saveMiniAll(); toast(`💾 ${MG_NAMES[k]} ${g.label(v)} 세이브 포인트 저장!`); }
+for(const k of Object.keys(SAVE_GAMES)){ const st=MG_GAMES[k].step; MG_GAMES[k].step=function(){ const r=st.apply(this,arguments); try{ svCheck(k); }catch(e){} return r; }; }
+function svContinue(k){ const s=svGet(k); if(!s) return; svLast[k]=JSON.stringify(s.level||s.lv||s.wave); SAVE_GAMES[k].apply(JSON.parse(JSON.stringify(s))); renderClick(true); toast(`💾 ${SAVE_GAMES[k].label(s)}부터 이어서 해요!`); }
+function svButton(k){ const s=svGet(k); return s?`<button class="btn ghost svbtn" data-svgo="${k}">💾 세이브 포인트에서 이어하기 (${SAVE_GAMES[k].label(s)}${s.score!=null?` · ${fmt(s.score)}점`:""})</button>`:""; }
+{ const _ov=mgOver; mgOver=function(key){ _ov.apply(this,arguments); if(!SAVE_GAMES[key]) return; const card=document.querySelector(`#${key}Over .skocard`); if(!card||!svGet(key)) return;
+    const w=document.createElement("div"); w.innerHTML=svButton(key); const b=w.firstElementChild; b.onclick=e=>{ e.stopPropagation(); svContinue(key); }; const again=card.querySelector(`#${key}Again`); again?again.after(b):card.appendChild(b); };
+  const _rc2=renderClick; renderClick=function(){ const r=_rc2.apply(this,arguments); const k=mgMode;
+    if(view==="click"&&SAVE_GAMES[k]&&svGet(k)&&SAVE_GAMES[k].fresh()&&!document.querySelector("[data-svgo]")){ const box=document.querySelector("#clickView .skbox"); if(box){ const w=document.createElement("div"); w.className="svrow"; w.innerHTML=svButton(k); box.after(w); w.querySelector("[data-svgo]").onclick=()=>svContinue(k); } }
+    return r; }; }
+
 { const _rm=renderManage; renderManage=function(){ _rm(); mountAdmin(); }; }
 

@@ -221,6 +221,7 @@ body:not(.is-owner) #tabManage,body:not(.is-owner) .owner-only{display:none!impo
 .skbox.sknarrow{aspect-ratio:330/700;width:min(100%,380px,calc((100dvh - 200px) * 330 / 700))}
 .skwrap.full .skbox.sknarrow{width:min(100%,calc((100dvh - 230px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 330 / 700))}
 #clickView.mgfull .skbox.sknarrow{width:min(100%,520px,calc((100dvh - 150px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * 330 / 700))!important}
+.svbtn{margin-top:4px}.svrow{display:flex;justify-content:center}
 .skdef{font-size:.65rem;background:var(--line,#ddd);border-radius:6px;padding:0 5px}
 /* Layout: one-column phone app, sticky top bar, bottom tab bar; quiz card = photo plate + answer slate */
 :root{
