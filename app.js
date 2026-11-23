@@ -1799,7 +1799,7 @@ let mgMode="click"; try{ mgMode=localStorage.getItem("httyd-mgMode")||"click"; }
 const SK_N=15, SK_W=330, SK_H=700, SK_LINE=100; // 통 너비 330 (예전 420)
 let mgFull=false;
 const SK_R=[13,17,21,25,30,35,41,48,56,65,75,86,98,112,128];
-const SK_COL=["#E85D75","#F08A4B","#F2C14E","#9BC53D","#3FA7D6","#5965D9","#A05CD6","#D65CA8","#2EC4B6","#E4572E","#FFD23F","#4CB944","#1F7A8C","#B23A48","#F7B32B"];
+const SK_COL=["#E63946","#12C2A8","#F2C14E","#9BC53D","#3FA7D6","#5965D9","#A05CD6","#D65CA8","#2EC4B6","#E4572E","#FFD23F","#4CB944","#1F7A8C","#B23A48","#F7B32B"];
 let sk={imgs:Array(SK_N).fill(""),best:0,games:0,items:{}};
 // 수박게임 아이템: 클릭커 물고기로 사요
 const SK_ITEMS=[
@@ -1859,7 +1859,7 @@ function skDrawBall(ctx,x,y,r,lv,ang){
   ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.closePath();
   if(im&&im.complete&&im.naturalWidth){ ctx.save(); ctx.clip(); const s=Math.max(2*r/im.naturalWidth,2*r/im.naturalHeight), w=im.naturalWidth*s, h=im.naturalHeight*s; ctx.drawImage(im,-w/2,-h/2,w,h); ctx.restore(); }
   else { ctx.fillStyle=SK_COL[lv]; ctx.fill(); ctx.fillStyle="rgba(255,255,255,.92)"; ctx.font=`bold ${Math.round(r*.8)}px sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.rotate(-(ang||0)); ctx.fillText(lv+1,0,1); }
-  ctx.lineWidth=Math.max(2,r*.09); ctx.strokeStyle=SK_COL[lv]; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+  ctx.lineWidth=Math.max(lv<2?4:2,r*.09); ctx.strokeStyle=SK_COL[lv]; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
   ctx.restore();
 }
 let skRaf=0, skLast=0;
