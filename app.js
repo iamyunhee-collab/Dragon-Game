@@ -1796,7 +1796,7 @@ function renderClick(force){
 // ---------- 미니게임: 수박게임 ----------
 // 같은 사진 두 개가 닿으면 합쳐져서 다음 단계 사진이 돼요. 사진은 단계마다 아빠가 골라요.
 let mgMode="click"; try{ mgMode=localStorage.getItem("httyd-mgMode")||"click"; }catch(e){}
-const SK_N=15, SK_W=420, SK_H=700, SK_LINE=100;
+const SK_N=15, SK_W=330, SK_H=700, SK_LINE=100; // 통 너비 330 (예전 420)
 let mgFull=false;
 const SK_R=[13,17,21,25,30,35,41,48,56,65,75,86,98,112,128];
 const SK_COL=["#E85D75","#F08A4B","#F2C14E","#9BC53D","#3FA7D6","#5965D9","#A05CD6","#D65CA8","#2EC4B6","#E4572E","#FFD23F","#4CB944","#1F7A8C","#B23A48","#F7B32B"];
@@ -1941,7 +1941,7 @@ function renderSuika(){
   el.innerHTML=mgTabsHtml()+(window.Matter?`<div class="skwrap" id="skWrap">
       <div class="skhud"><div><span>점수</span><b id="skScore">0</b></div><div><span>최고</span><b id="skBest">${fmt(sk.best||0)}</b></div>
         <div class="sknext"><span>다음</span><canvas id="skNext" width="80" height="80"></canvas></div><button class="btn ghost small" id="skRestart">새 판</button></div>
-      <div class="skbox"><canvas id="skCanvas"></canvas><div class="skover" id="skOver" hidden></div></div>
+      <div class="skbox sknarrow"><canvas id="skCanvas"></canvas><div class="skover" id="skOver" hidden></div></div>
       <div class="skitems" id="skItems"></div>
     </div>`:`<div class="empty"><h2>게임을 불러오지 못했어요</h2><p class="note">인터넷 연결을 확인하고 다시 열어 주세요.</p></div>`)+
     `<p class="sec-title">단계별 사진 <span class="note" style="font-family:var(--body)">1이 가장 작고 15가 가장 커요. 같은 단계 둘이 닿으면 다음 단계가 돼요.</span></p>
